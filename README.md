@@ -31,4 +31,4 @@ Since the entire application is contained within `index.html`, there is no insta
 
 ## 💡 Why this project?
 
-This project was built to explore React state management, complex CSS 3D transforms (for the flip animations), and fully functional data visualization (SVG charts) without relying on heavy node modules or external databases. It serves as a lightweight, highly optimized productivity tool.
+This project was built to explore React state management, complex CSS 3D transforms (for the flip animations), and fully functional data visualization (SVG charts) without relying on heavy node modules or external databases. It serves as a lightweight, highly optimized productivity tool..
