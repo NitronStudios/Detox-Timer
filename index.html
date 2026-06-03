@@ -1008,16 +1008,23 @@ function TimerPage({ settings, onStateChange }) {
 
   useEffect(() => {
     if (isRunning) {
+      let lastTick = Date.now();
       intervalRef.current = setInterval(() => {
-        setTimeLeft(t => {
-          if (t <= 1) {
-            clearInterval(intervalRef.current);
-            handlePhaseEnd();
-            return 0;
-          }
-          return t - 1;
-        });
-        setElapsed(e => e + 1);
+        const now = Date.now();
+        const deltaSeconds = Math.floor((now - lastTick) / 1000);
+        
+        if (deltaSeconds > 0) {
+          lastTick += deltaSeconds * 1000;
+          setElapsed(e => e + deltaSeconds);
+          setTimeLeft(t => {
+            if (t - deltaSeconds <= 0) {
+              clearInterval(intervalRef.current);
+              setTimeout(handlePhaseEnd, 0); 
+              return 0;
+            }
+            return t - deltaSeconds;
+          });
+        }
       }, 1000);
     }
     return () => clearInterval(intervalRef.current);
@@ -1227,7 +1234,16 @@ function StopwatchPage({ onStateChange }) {
 
   useEffect(() => {
     if (isRunning) {
-      intervalRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
+      let lastTick = Date.now();
+      intervalRef.current = setInterval(() => {
+        const now = Date.now();
+        const deltaSeconds = Math.floor((now - lastTick) / 1000);
+        
+        if (deltaSeconds > 0) {
+          lastTick += deltaSeconds * 1000;
+          setElapsed(e => e + deltaSeconds);
+        }
+      }, 1000);
     } else {
       clearInterval(intervalRef.current);
     }
