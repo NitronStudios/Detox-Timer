@@ -1,6 +1,6 @@
 # DETOX TIMER — Flip Clock Study Timer ⏳
 
-FOCUS is a minimalist, distraction-free productivity web application designed for students and developers. Whether you are grinding through long Accountancy problems or diving into deep coding sessions, this timer helps you maintain flow and track your progress locally. 
+DETOX TIMER is a minimalist, distraction-free productivity web application designed for students and developers. Whether you are grinding through long Accountancy problems or diving into deep coding sessions, this timer helps you maintain flow and track your progress locally. 
 
 Built entirely in a **single HTML file** using React (via CDN) and CSS3, it requires no build steps, no backend, and works 100% offline.
 
