@@ -25,7 +25,7 @@ Built entirely in a **single HTML file** using React (via CDN) and CSS3, it requ
 
 Since the entire application is contained within `index.html`, there is no installation required. 
 
-1. Simply open the [Live Demo](#) *(https://nitronstudios.github.io/Detox-Timer/)* on your laptop or mobile browser.
+1. Simply open the [Live Demo](https://nitronstudios.github.io/Detox-Timer/) on your laptop or mobile browser.
 2. Enter your subject, select your mode, and hit **START**.
 3. All your data stays on your device.
 
