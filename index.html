@@ -11,6 +11,31 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;800&display=swap" rel="stylesheet" />
 
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAo9lvjI-2bxRQsSEilU2y7tnogogvualc",
+      authDomain: "detox-timer.firebaseapp.com",
+      projectId: "detox-timer",
+      storageBucket: "detox-timer.firebasestorage.app",
+      messagingSenderId: "218711791084",
+      appId: "1:218711791084:web:28931170be653685319cc9"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    
+    // Attach to window so Babel/React can access them globally
+    window.auth = getAuth(app);
+    window.db = getFirestore(app);
+    window.googleProvider = new GoogleAuthProvider();
+    
+    window.fbAuth = { signInWithPopup, onAuthStateChanged, signOut };
+    window.fbDb = { doc, setDoc, getDoc, collection, getDocs, deleteDoc };
+  </script>
+
   <!-- React + Babel via CDN -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -1089,6 +1114,7 @@
     .heatmap-wrap { display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-start; }
     .heat-box { width: 14px; height: 14px; border-radius: 3px; transition: transform 0.2s ease; cursor: crosshair; }
     .heat-box:hover { transform: scale(1.2); }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
   </style>
 </head>
 
@@ -1099,13 +1125,27 @@
     const { useState, useEffect, useRef, useCallback } = React;
 
     /* ================================================================
-       STORAGE HELPERS
+       STORAGE HELPERS (WITH CLOUD SYNC)
        ================================================================ */
     const STORAGE_KEY = 'focus_sessions';
 
     function getSessions() {
       try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
       catch { return []; }
+    }
+
+    async function syncToCloud() {
+      if (!window.auth || !window.auth.currentUser) return;
+      const user = window.auth.currentUser;
+      const sessions = getSessions();
+      const settings = JSON.parse(localStorage.getItem('focus_settings') || '{}');
+      try {
+        await window.fbDb.setDoc(window.fbDb.doc(window.db, 'users', user.uid), {
+          sessions,
+          settings,
+          lastUpdated: Date.now()
+        });
+      } catch (e) { console.error("Cloud Sync Error:", e); }
     }
 
     function saveSession(subject, elapsedSeconds) {
@@ -1123,12 +1163,14 @@
       const sessions = getSessions();
       sessions.push(entry);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+      syncToCloud();
       return entry;
     }
 
     function deleteSession(id) {
       const sessions = getSessions().filter(s => s.id !== id);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+      syncToCloud();
     }
 
     function getTodayStr() {
@@ -1966,7 +2008,7 @@ function Heatmap({ sessions, dailyGoal }) {
                <div className="chart-title">Deep Stats &amp; Streaks</div>
                <div className="stat-group" style={{ marginTop: '0.5rem', height: '100%' }}>
                   <div className="stat-item">
-                     <div className="stat-val">{streak} 🔥</div>
+                     <div className="stat-val" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>{streak} <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c-2.2 0-4-1.8-4-4a8 8 0 0 1 14 6c0 4.4-3.6 8-8 8a8 8 0 0 1-8-8c1.7 0 2.5.5 2.5 2.5z"></path></svg></div>
                      <div className="stat-label">Day Streak</div>
                   </div>
                   <div className="stat-item">
@@ -2051,9 +2093,18 @@ function Heatmap({ sessions, dailyGoal }) {
       function handleClearData() {
         if (window.confirm("Are you sure you want to clear all your study data? This cannot be undone.")) {
           localStorage.removeItem('focus_sessions');
+          syncToCloud();
           alert("All data cleared successfully.");
           onClose();
         }
+      }
+
+      function handleLogout() {
+        window.fbAuth.signOut(window.auth)
+          .then(() => {
+            onClose();
+          })
+          .catch(err => console.error("Logout Error", err));
       }
 
 
@@ -2061,6 +2112,56 @@ function Heatmap({ sessions, dailyGoal }) {
         const newSettings = { ...settings, [key]: val };
         setSettings(newSettings);
         localStorage.setItem('focus_settings', JSON.stringify(newSettings));
+        syncToCloud();
+      }
+
+      function handleExportData() {
+        const sessions = getSessions();
+        if (sessions.length === 0) return alert("No data to export!");
+        const headers = ["ID", "Date", "Subject", "Duration (Minutes)"];
+        const rows = sessions.map(s => [s.id, s.date, `"${s.subject}"`, s.durationMinutes]);
+        const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "detox_timer_data.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      function handleImportCSV(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const text = event.target.result;
+          const lines = text.split('\n');
+          const importedSessions = [];
+          for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            const cols = lines[i].split(',');
+            if (cols.length >= 4) {
+              importedSessions.push({
+                id: parseInt(cols[0]),
+                date: cols[1],
+                subject: cols[2].replace(/"/g, ''),
+                durationMinutes: parseInt(cols[3])
+              });
+            }
+          }
+          if (importedSessions.length > 0) {
+            const existing = JSON.parse(localStorage.getItem('focus_sessions') || '[]');
+            const merged = [...existing, ...importedSessions];
+            // Deduplicate by ID to prevent double entries
+            const unique = merged.filter((v, i, a) => a.findIndex(v2 => (v2.id === v.id)) === i);
+            localStorage.setItem('focus_sessions', JSON.stringify(unique));
+            if (typeof syncToCloud === 'function') syncToCloud();
+            alert(`${importedSessions.length} sessions imported & synced to cloud successfully!`);
+            onClose(); // Close settings to see dashboard update
+          }
+        };
+        reader.readAsText(file);
       }
 
       const ACCENT_COLORS = [
@@ -2108,11 +2209,62 @@ function Heatmap({ sessions, dailyGoal }) {
             </div>
 
 
-            <button onClick={handleClearData} style={{ padding: '10px', background: 'transparent', border: '1px solid #ff4444', color: '#ff4444', borderRadius: '6px', cursor: 'pointer', marginTop: '1rem', transition: 'all 0.2s' }}>Clear All Study Data</button>
+            <div style={{ borderTop: '1px solid var(--divider)', paddingTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={handleExportData} style={{ flex: 1, padding: '10px', background: 'var(--card2)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s', fontWeight: '500' }}>📥 Export CSV</button>
+                
+                <input type="file" accept=".csv" id="csv-upload" style={{ display: 'none' }} onChange={handleImportCSV} />
+                <button onClick={() => document.getElementById('csv-upload').click()} style={{ flex: 1, padding: '10px', background: 'var(--card2)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s', fontWeight: '500' }}>📤 Import CSV</button>
+              </div>
+              <button onClick={handleLogout} style={{ padding: '10px', background: 'var(--card2)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg> Sign Out</button>
+              <button onClick={handleClearData} style={{ padding: '10px', background: 'transparent', border: '1px solid #ff4444', color: '#ff4444', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s' }}>Clear Local Data</button>
+            </div>
           </div>
         </div>
       );
     }
+
+/* ================================================================
+   LOGIN SCREEN
+   ================================================================ */
+function LoginScreen() {
+  const [loading, setLoading] = useState(false);
+
+  function handleGoogleLogin() {
+    setLoading(true);
+    window.fbAuth.signInWithPopup(window.auth, window.googleProvider)
+      .catch((error) => {
+        console.error("Login Error:", error);
+        alert("Failed to sign in. Please try again.");
+        setLoading(false);
+      });
+  }
+
+  return (
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--text)' }}>
+      <div style={{ background: 'var(--card)', padding: '3rem', borderRadius: '16px', border: '1px solid var(--border)', textAlign: 'center', maxWidth: '400px', width: '90%' }}>
+        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--text)', color: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem auto', fontSize: '2rem', fontWeight: '800' }}>
+          D
+        </div>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '0.5rem', letterSpacing: '0.1em' }}>DETOX TIMER</h1>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '2.5rem', lineHeight: '1.5' }}>Sync your focus sessions, track consistency, and build habits across all your devices.</p>
+        
+        <button 
+          onClick={handleGoogleLogin} 
+          disabled={loading}
+          style={{ width: '100%', padding: '0.85rem', background: 'var(--text)', color: 'var(--bg)', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+        >
+          {loading ? 'Connecting...' : (
+            <>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+              Continue with Google
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
 
     /* ================================================================
        NAVBAR
@@ -2151,66 +2303,88 @@ function Heatmap({ sessions, dailyGoal }) {
       );
     }
 
-    /* ================================================================
-       ROOT APP
-       ================================================================ */
-    function App() {
-      const [tab, setTab] = useState('Timer');
-      const [showDash, setShowDash] = useState(false);
-      const [showSettings, setShowSettings] = useState(false);
-      const [timerActive, setTimerActive] = useState(false);
-      const [stopwatchActive, setStopwatchActive] = useState(false);
+/* ================================================================
+   ROOT APP
+   ================================================================ */
+function App() {
+  const [user, setUser] = useState(null);
+  const [authChecking, setAuthChecking] = useState(true);
 
-      const [settings, setSettings] = useState(() => {
-        try {
-          const saved = localStorage.getItem('focus_settings');
-          if (saved) {
-            return {
-              studyMin: 25,
-              breakMin: 5,
-              normalMin: 25,
-              audioEnabled: true,
-              strictMode: false,
-              dailyGoal: 4,
-              accentColor: '#4CAF50',
-              clockFormat: '12h',
-              ...JSON.parse(saved)
-            };
-          }
-        } catch (e) { }
+  const [tab, setTab] = useState('Timer');
+  const [showDash, setShowDash] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [timerActive, setTimerActive] = useState(false);
+  const [stopwatchActive, setStopwatchActive] = useState(false);
+
+  const [settings, setSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem('focus_settings');
+      if (saved) {
         return {
-          studyMin: 25,
-          breakMin: 5,
-          normalMin: 25,
-          audioEnabled: true,
-          strictMode: false,
-          dailyGoal: 4,
-          accentColor: '#4CAF50',
-          clockFormat: '12h'
+          studyMin: 25, breakMin: 5, normalMin: 25,
+          audioEnabled: true, strictMode: false, dailyGoal: 4,
+          accentColor: '#4CAF50', clockFormat: '12h',
+          ...JSON.parse(saved)
         };
-      });
-
-      const [theme, setTheme] = useState(() => {
-        const saved = localStorage.getItem('focus_theme');
-        if (saved) return saved;
-        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'flip';
-      });
-
-      useEffect(() => {
-        document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('focus_theme', theme);
-      }, [theme]);
-
-      // Update dynamic --accent property on CSS root variables
-      useEffect(() => {
-        document.documentElement.style.setProperty('--accent', settings.accentColor);
-      }, [settings.accentColor]);
-
-      function cycleTheme() {
-        setTheme(t => t === 'flip' ? 'dark' : t === 'dark' ? 'light' : 'flip');
       }
+    } catch (e) { }
+    return {
+      studyMin: 25, breakMin: 5, normalMin: 25,
+      audioEnabled: true, strictMode: false, dailyGoal: 4,
+      accentColor: '#4CAF50', clockFormat: '12h'
+    };
+  });
 
-      return (
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('focus_theme');
+    if (saved) return saved;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'flip';
+  });
+
+  // Firebase Auth & Cloud Sync Listener
+  useEffect(() => {
+    const unsubscribe = window.fbAuth.onAuthStateChanged(window.auth, async (currentUser) => {
+      if (currentUser) {
+        try {
+          const docSnap = await window.fbDb.getDoc(window.fbDb.doc(window.db, 'users', currentUser.uid));
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.sessions) localStorage.setItem('focus_sessions', JSON.stringify(data.sessions));
+            if (data.settings) {
+              localStorage.setItem('focus_settings', JSON.stringify(data.settings));
+              setSettings(prev => ({ ...prev, ...data.settings }));
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching cloud data:", error);
+        }
+      }
+      setUser(currentUser);
+      setAuthChecking(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('focus_theme', theme);
+  }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--accent', settings.accentColor);
+  }, [settings.accentColor]);
+
+  function cycleTheme() {
+    setTheme(t => t === 'flip' ? 'dark' : t === 'dark' ? 'light' : 'flip');
+  }
+
+  if (authChecking) { return <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--text)', gap: '1rem' }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="4.93" x2="19.07" y2="7.76"></line></svg><span style={{ fontSize: '0.9rem', letterSpacing: '0.1em' }}>LOADING</span></div>; }
+
+  if (!user) {
+    return <LoginScreen />;
+  }
+
+  return (
         <div className="app">
           <Navbar tab={tab} setTab={setTab} theme={theme} cycleTheme={cycleTheme}
             showDash={showDash} setShowDash={setShowDash}
