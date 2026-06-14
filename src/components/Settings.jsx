@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { getSessions, syncToCloud } from '../utils/helpers';
 import { auth, fbAuth, db, fbDb } from '../config/firebase';
 
-export default function Settings({ settings, setSettings, onClose }) {
+export default function Settings({ settings, setSettings, onClose, theme, cycleTheme }) {
   const [usernameInput, setUsernameInput] = useState(settings.username || '');
   const [usernameStatus, setUsernameStatus] = useState('');
   const [daysLeft, setDaysLeft] = useState(0);
@@ -206,6 +206,20 @@ export default function Settings({ settings, setSettings, onClose }) {
             {daysLeft === 0 && usernameStatus === 'error_invalid' && <span style={{ color: '#EF4444' }}>⚠️ Only letters, numbers, and underscores (_) are allowed.</span>}
             {usernameStatus === 'saved' && <span style={{ color: '#4CAF50' }}>✅ Username successfully saved!</span>}
           </div>
+        </div>
+
+        {/* Theme Selection */}
+        <div className="setting-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginTop: '1rem' }}>
+          <span className="setting-label" style={{ fontWeight: 'bold' }}>App Theme</span>
+          <button 
+            onClick={cycleTheme}
+            style={{ padding: '0.5rem 1.2rem', background: 'var(--card2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '20px', fontSize: '0.95rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}
+          >
+            <span style={{ fontSize: '1.1rem' }}>
+              {theme === 'light' ? '☀️' : theme === 'dark' ? '🌙' : '🕰️'}
+            </span>
+            {theme === 'light' ? 'Light' : theme === 'dark' ? 'Dark' : 'Flip (OLED)'}
+          </button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

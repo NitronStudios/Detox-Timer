@@ -1072,4 +1072,138 @@
     .heat-box { width: 14px; height: 14px; border-radius: 3px; transition: transform 0.2s ease; cursor: crosshair; }
     .heat-box:hover { transform: scale(1.2); }
     @keyframes spin { 100% { transform: rotate(360deg); } }
+
+/* ================================================================
+   MOBILE SIDE MENU (HAMBURGER) - APPLIES ONLY ON MOBILE
+   ================================================================ */
+.navbar-mobile-left,
+.navbar-mobile-right {
+  display: none;
+}
+
+.mobile-menu-btn {
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  position: relative;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  background: #EF4444;
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+}
+
+.side-menu-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 2999;
+  backdrop-filter: blur(3px);
+}
+
+.side-menu {
+  position: fixed;
+  top: 0; left: -280px;
+  width: 260px;
+  height: 100vh;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  z-index: 3000;
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+}
+
+.side-menu.open {
+  left: 0;
+}
+
+.side-menu-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.side-menu-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--text);
+}
+
+.close-menu-btn {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 2.2rem;
+  cursor: pointer;
+  line-height: 0.8;
+  padding: 0;
+}
+
+.side-menu-links {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.side-menu-links button {
+  display: flex;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  text-align: left;
+}
+
+.side-menu-links button:hover, 
+.side-menu-links button.active {
+  background: var(--card);
+  color: var(--accent);
+}
+
+/* ONLY APPLY TO MOBILE PHONES */
+@media (max-width: 768px) {
+  .navbar-brand {
+    display: none !important; /* Hide DETOX TIMER text */
+  }
+  .navbar-right {
+    display: none !important; /* Hide right icons */
+  }
+  .navbar-mobile-left {
+    display: flex;
+    align-items: center;
+    width: 30px; 
+  }
+  .navbar-mobile-right {
+    display: block;
+    width: 30px; /* Fake spacer to keep center tabs perfectly centered */
+  }
+  .navbar {
+    justify-content: space-between; /* Space out hamburger, tabs, and fake right spacer */
+    padding: 0 1rem;
+  }
+}
   

@@ -153,7 +153,7 @@ export default function App() {
       </div>
 
       {showDash && <Dashboard settings={settings} onClose={() => setShowDash(false)} />}
-      {showSettings && <Settings settings={settings} setSettings={setSettings} onClose={() => setShowSettings(false)} />}
+      {showSettings && <Settings settings={settings} setSettings={setSettings} theme={theme} cycleTheme={cycleTheme} onClose={() => setShowSettings(false)} />}
       {showManualLog && <ManualLogModal onClose={() => setShowManualLog(false)} />}
       {showLeaderboard && <LeaderboardModal onClose={() => setShowLeaderboard(false)} />}
       {showChat && <ChatModal onClose={() => setShowChat(false)} />}
