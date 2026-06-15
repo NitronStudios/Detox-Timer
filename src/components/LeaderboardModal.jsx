@@ -22,16 +22,42 @@ export default function LeaderboardModal({ onClose }) {
       try {
         const querySnapshot = await fbDb.getDocs(fbDb.collection(db, 'leaderboard'));
         const data = [];
+        
+        // 1. Calculate time boundaries
+        const now = new Date();
+        const offset = now.getTimezoneOffset();
+        const localNow = new Date(now.getTime() - offset * 60000);
+        const todayStr = localNow.toISOString().split('T')[0];
+
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+
         querySnapshot.forEach((doc) => {
-          data.push({ id: doc.id, ...doc.data() });
+          const item = { id: doc.id, ...doc.data() };
+          const lastUp = new Date(item.lastUpdated || 0);
+
+          // Local date string for lastUpdated
+          const localLastUp = new Date(lastUp.getTime() - lastUp.getTimezoneOffset() * 60000);
+          const lastUpStr = localLastUp.toISOString().split('T')[0];
+
+          // 2. STALE DATA FIX: Zero out old data before sorting
+          if (lastUpStr !== todayStr) item.daily = 0;
+          if (lastUp < startOfWeek) item.weekly = 0;
+          if (lastUp < startOfMonth) item.monthly = 0;
+          if (lastUp < startOfYear) item.yearly = 0;
+
+          data.push(item);
         });
 
-        // Sort dynamically based on the active tab
+        // 3. Sort dynamically based on the active tab
         data.sort((a, b) => (b[activeTab] || 0) - (a[activeTab] || 0));
 
-        // Assign ranks and format time, filter out zero times
+        // 4. Assign ranks, format time, and filter out zeroes
         const rankedData = data.map((item, index) => {
-          // Use username if exists, otherwise fallback to ID substring
           const displayUser = (item.username && item.username !== 'Anonymous') 
                               ? item.username 
                               : `Anonymous_${item.id.substring(0, 4)}`;
