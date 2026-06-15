@@ -15,6 +15,10 @@ dist-ssr
 # Capacitor native project (generated - do not commit)
 android/
 
+# Android signing keys (NEVER commit these!)
+*.jks
+*.keystore
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
