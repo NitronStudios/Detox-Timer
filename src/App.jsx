@@ -82,18 +82,70 @@ export default function App() {
     document.documentElement.style.setProperty('--accent', settings.accentColor);
   }, [settings.accentColor]);
 
-  // Prevent accidental tab closure if a timer is active
+  // ================================================================
+  // ACTIVE TIMER PROTECTIONS (Web + Mobile Survival Shield)
+  // ================================================================
   useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (timerActive || stopwatchActive) {
-        e.preventDefault();
-        e.returnValue = ''; // Required for Chrome and modern browsers to show the warning
-        return ''; // Legacy support
+    let wakeLock = null;
+
+    // 1. Prevent screen from sleeping (Mobile/Desktop)
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator && (timerActive || stopwatchActive) && document.visibilityState === 'visible') {
+          wakeLock = await navigator.wakeLock.request('screen');
+        }
+      } catch (err) {
+        console.log('Wake Lock error:', err);
       }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    const releaseWakeLock = async () => {
+      if (wakeLock !== null) {
+        await wakeLock.release();
+        wakeLock = null;
+      }
+    };
+
+    // 2. Re-acquire lock if user switches apps and comes back
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') requestWakeLock();
+    };
+
+    // 3. Warn on accidental tab close/refresh (PC)
+    const handleBeforeUnload = (e) => {
+      if (timerActive || stopwatchActive) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    // Apply protections if active
+    if (timerActive || stopwatchActive) {
+      requestWakeLock();
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      
+      // 4. Anti-Swipe Back Hack (Mobile)
+      window.history.pushState(null, '', window.location.href);
+      window.onpopstate = function () {
+         if (window.confirm("Focus Session is active! Are you sure you want to go back?")) {
+             window.history.back();
+         } else {
+             window.history.pushState(null, '', window.location.href);
+         }
+      };
+    } else {
+      releaseWakeLock();
+      window.onpopstate = null;
+    }
+
+    return () => {
+      releaseWakeLock();
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.onpopstate = null;
+    };
   }, [timerActive, stopwatchActive]);
 
   // Online Presence Heartbeat

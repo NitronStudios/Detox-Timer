@@ -12,15 +12,21 @@ export default function FlipDisplay({ seconds, showHours = false }) {
   return (
     <div className="flip-group">
       {showHours && <>
-        <FlipCard digit={hStr[0]} />
-        <FlipCard digit={hStr[1]} />
+        <div className="flip-pair">
+          <FlipCard digit={hStr[0]} />
+          <FlipCard digit={hStr[1]} />
+        </div>
         <span className="flip-separator">:</span>
       </>}
-      <FlipCard digit={mStr[0]} />
-      <FlipCard digit={mStr[1]} />
+      <div className="flip-pair">
+        <FlipCard digit={mStr[0]} />
+        <FlipCard digit={mStr[1]} />
+      </div>
       <span className="flip-separator">:</span>
-      <FlipCard digit={sStr[0]} />
-      <FlipCard digit={sStr[1]} />
+      <div className="flip-pair">
+        <FlipCard digit={sStr[0]} />
+        <FlipCard digit={sStr[1]} />
+      </div>
     </div>
   );
 }

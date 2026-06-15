@@ -966,11 +966,13 @@
     .settings-input::-webkit-outer-spin-button,
     .settings-input::-webkit-inner-spin-button {
       -webkit-appearance: none;
+      appearance: none;
       margin: 0;
     }
 
     .settings-input[type="number"] {
       -moz-appearance: textfield;
+      appearance: textfield;
     }
 
     .settings-toggle {
@@ -1206,4 +1208,71 @@
     padding: 0 1rem;
   }
 }
+
+/* ================================================================
+   MOBILE VERTICAL FLIP CLOCK & DYNAMIC SCALING (FIXED)
+   ================================================================ */
+.flip-pair {
+  display: flex;
+  gap: 10px;
+}
+
+/* Wrapper for the active/running pages */
+.running-page-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between; /* Perfectly spreads Title (top), Clock (middle), Buttons (bottom) */
+  height: 100%; /* CRITICAL FIX: Changed from 100vh to 100% to perfectly fit parent and prevent overflow */
+  width: 100%;
+  padding: 1.5rem 0 2.5rem 0; /* Extra bottom padding for safe-zones/home-bars on modern phones */
+  box-sizing: border-box;
+}
+
+/* Base style for dynamic scaling wrapper */
+.dynamic-flip-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1; 
+  width: 100%;
+}
+
+.dynamic-flip-clock {
+  transform-origin: center center;
+}
+
+/* PC Active Scale */
+@media (min-width: 769px) {
+  .dynamic-flip-wrapper .dynamic-flip-clock {
+    transform: scale(1.25); /* Reduced from 2.0. Perfectly fits the horizontal layout without clipping */
+  }
+}
+
+/* MOBILE Layout & Scale */
+@media (max-width: 768px) {
+  .flip-group {
+    flex-direction: column !important;
+    gap: 12px !important;
+    align-items: center !important; 
+  }
   
+  .flip-pair {
+    justify-content: center !important;
+  }
+  
+  .flip-separator {
+    display: none !important; /* Hide colons */
+  }
+  
+  .page > div[style*="position: relative"] > span {
+    right: -45px !important;
+    bottom: 5px !important;
+  }
+
+  /* INCREASED scale for 3 stacked rows on phone screens */
+  .dynamic-flip-wrapper .dynamic-flip-clock {
+    transform: scale(1.65) !important; /* Bumped up significantly for a larger look */
+    margin-top: 0 !important; 
+  }
+}

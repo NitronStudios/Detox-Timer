@@ -1,17 +1,35 @@
 import { useState } from 'react';
 import { auth, fbAuth, googleProvider } from '../config/firebase';
+import { Capacitor } from '@capacitor/core';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
+import { GoogleAuthProvider } from 'firebase/auth';
 
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
-  function handleGoogleLogin() {
+  async function handleGoogleLogin() {
     setLoading(true);
-    fbAuth.signInWithPopup(auth, googleProvider)
-      .catch((error) => {
-        console.error("Login Error:", error);
-        alert("Failed to sign in. Please try again.");
-        setLoading(false);
-      });
+    try {
+      if (Capacitor.isNativePlatform()) {
+        // Native Android: use official Firebase Capacitor plugin
+        const result = await FirebaseAuthentication.signInWithGoogle();
+        const idToken = result.credential?.idToken;
+
+        if (!idToken) {
+          throw new Error('Google Sign-In did not return an idToken.');
+        }
+
+        const credential = GoogleAuthProvider.credential(idToken);
+        await fbAuth.signInWithCredential(auth, credential);
+      } else {
+        // Web browser: use standard popup
+        await fbAuth.signInWithPopup(auth, googleProvider);
+      }
+    } catch (error) {
+      console.error('Login Error:', error);
+      alert('Login failed: ' + (error.message || JSON.stringify(error)));
+      setLoading(false);
+    }
   }
 
   return (

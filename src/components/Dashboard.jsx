@@ -1,13 +1,11 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getSessions, deleteSession, getTodayStr, getGlobalSubjectColor } from '../utils/helpers';
 
-/* ================================================================
-   STACKED BAR CHART (SVG)
-   ================================================================ */
-function BarChart() {
+// ================================================================
+// BAR CHART (With Dynamic Y-Axis & Grid Lines)
+// ================================================================
+function BarChart({ dailyGoal }) {
   const sessions = getSessions();
-  const todayStr = getTodayStr();
-
   const DAYS = ['Su', 'M', 'T', 'W', 'Th', 'F', 'S'];
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
@@ -28,360 +26,332 @@ function BarChart() {
     const subjects = Object.keys(subjectsMap).map(sub => ({
        label: sub,
        minutes: subjectsMap[sub],
-       color: getGlobalSubjectColor(sub)
+       color: typeof getGlobalSubjectColor === 'function' ? getGlobalSubjectColor(sub) : '#4CAF50'
     })).sort((a,b) => b.minutes - a.minutes);
 
-    return { label: DAYS[d.getDay()], totalMinutes, subjects, isToday: dateStr === todayStr };
+    return { label: DAYS[d.getDay()], total: totalMinutes, subjects };
   });
 
-  const W = 800, H = 450, PL = 35, PB = 25, PT = 15, PR = 10;
-  const cW = W - PL - PR, cH = H - PT - PB;
-  const maxMin = Math.max(...days.map(d => d.totalMinutes), 60);
-  const pxPerMin = cH / Math.max(maxMin, 480);
-  const bW = 50;
-  const gap = (cW - bW * 7) / 6;
+  const highestMins = Math.max(...days.map(d => d.total), 0);
+  
+  let chartMaxHours = parseInt(dailyGoal) || 4;
+  while (highestMins >= (chartMaxHours * 60) - 30) {
+    chartMaxHours += 1;
+  }
+  const chartMaxMins = chartMaxHours * 60;
+
+  const yAxisLabels = [];
+  const step = chartMaxHours >= 10 ? 2 : 1; 
+  for (let h = chartMaxHours; h >= 0; h -= step) {
+    yAxisLabels.push(h);
+  }
+  if (!yAxisLabels.includes(0)) yAxisLabels.push(0);
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ overflow: 'visible', display: 'block' }}>
-      {[0, 2, 4, 6, 8].map(h => {
-        const y = H - PB - (h * 60 * pxPerMin);
-        return <text key={h} x={PL - 12} y={y + 5} fill="var(--text-muted)" fontSize="14" fontWeight="500" textAnchor="end">{h}h</text>;
-      })}
-
-      {days.map((d, i) => {
-        const x = PL + i * (bW + gap);
-        
-        if (d.totalMinutes === 0) {
+    <div style={{ display: 'flex', flex: 1, minHeight: '150px', paddingTop: '15px' }}>
+      
+      {/* Y-AXIS LABELS */}
+      <div style={{ position: 'relative', width: '35px', height: 'calc(100% - 22px)', marginRight: '5px' }}>
+        {yAxisLabels.map((h, i) => {
+          const pct = (h * 60) / chartMaxMins;
           return (
-            <g key={i}>
-              <rect x={x} y={H - PB - 3} width={bW} height={3} rx="2" fill="var(--border)" />
-              <text x={x + bW / 2} y={H - 7} fill="var(--text-muted)" fontSize="14" fontWeight="500" textAnchor="middle">{d.label}</text>
-            </g>
+            <span key={i} style={{ position: 'absolute', top: `${(1 - pct) * 100}%`, right: 0, transform: 'translateY(-50%)', fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+              {h}h
+            </span>
           );
-        }
+        })}
+      </div>
 
-        let currentY = H - PB;
-        return (
-          <g key={i}>
-            {d.subjects.map((sub, j) => {
-              const sH = Math.max(2, sub.minutes * pxPerMin);
-              currentY -= sH;
+      {/* BARS & GRID CONTAINER */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flex: 1, gap: '8px', position: 'relative' }}>
+        
+        {/* Background Grid Lines */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 'calc(100% - 22px)', pointerEvents: 'none', zIndex: 0 }}>
+           {yAxisLabels.map((h, i) => {
+              const pct = (h * 60) / chartMaxMins;
               return (
-                <rect 
-                  key={j} 
-                  x={x} y={currentY} width={bW} height={sH} rx="3"
-                  fill={sub.color}
-                  stroke="var(--bg)"
-                  strokeWidth="2.5"
-                  style={{ transition: 'all 0.3s ease' }} 
-                >
-                  <title>{sub.label}: {sub.minutes}m</title>
-                </rect>
+                <div key={i} style={{ position: 'absolute', top: `${(1 - pct) * 100}%`, left: 0, width: '100%', borderTop: '1px dashed var(--border)', opacity: 0.5, transform: 'translateY(-50%)' }}></div>
               );
-            })}
-            <text x={x + bW / 2} y={H - 7} fill="var(--text-muted)" fontSize="14" fontWeight="500" textAnchor="middle">{d.label}</text>
-          </g>
-        );
-      })}
+           })}
+        </div>
 
-      {/* Draw axes LAST so they render on top and don't get hidden by bar strokes */}
-      <line x1={PL} y1={PT} x2={PL} y2={H - PB} stroke="var(--border)" strokeWidth="1.5" />
-      <line x1={PL} y1={H - PB} x2={W - PR} y2={H - PB} stroke="var(--border)" strokeWidth="1.5" />
-    </svg>
-  );
-}
-
-/* ================================================================
-   FULL YEAR GITHUB HEATMAP (AUTO-FIT GRID)
-   ================================================================ */
-function Heatmap({ sessions, dailyGoal }) {
-  const now = new Date();
-  const year = now.getFullYear();
-  
-  const startDate = new Date(year, 0, 1);
-  const endDate = new Date(year, 11, 31);
-  
-  const days = [];
-  const sessionTotals = {};
-  sessions.forEach(s => {
-     sessionTotals[s.date] = (sessionTotals[s.date] || 0) + s.durationMinutes;
-  });
-
-  // Add blank placeholders so Jan 1st aligns with the correct day of the week
-  const startDayOfWeek = startDate.getDay();
-  for(let i = 0; i < startDayOfWeek; i++) {
-     days.push({ isBlank: true });
-  }
-
-  let d = new Date(startDate);
-  // Get local date string for today
-  const todayDateStr = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
-
-  while (d <= endDate) {
-     const offset = d.getTimezoneOffset();
-     const local = new Date(d.getTime() - offset * 60000);
-     const dateStr = local.toISOString().split('T')[0];
-     
-     const isFuture = dateStr > todayDateStr;
-     const mins = sessionTotals[dateStr] || 0;
-     
-     days.push({ dateStr, mins, isFuture, isBlank: false });
-     d.setDate(d.getDate() + 1);
-  }
-
-  // Calculate total columns (weeks) + 1 extra column for the weekday labels
-  const totalCols = Math.ceil(days.length / 7) + 1;
-  const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-  
-  return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 1rem' }}>
-      <div style={{ 
-         display: 'grid', 
-         gridTemplateRows: 'repeat(7, 1fr)', 
-         gridTemplateColumns: `repeat(${totalCols}, 1fr)`,
-         gridAutoFlow: 'column', 
-         gap: 'clamp(3px, 0.4vw, 6px)', 
-         width: '100%',
-         aspectRatio: `${totalCols} / 7`, 
-         margin: '0 auto'
-      }}>
-         {/* Labels Column */}
-         {DAY_LABELS.map((lbl, i) => (
-            <div key={`lbl-${i}`} style={{ 
-               display: 'flex', 
-               alignItems: 'center', 
-               justifyContent: 'center',
-               fontSize: 'clamp(0.5rem, 0.75vw, 0.85rem)',
-               fontWeight: '600',
-               color: 'var(--text-muted)',
-               height: '100%',
-               width: '100%'
-            }}>
-               {lbl}
+        {/* Vertical Bars */}
+        {days.map((d, i) => (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, height: '100%', zIndex: 1 }} title={`Total: ${Math.floor(d.total / 60)}h ${d.total % 60}m`}>
+            <div style={{ width: '100%', flex: 1, background: 'var(--bg)', borderRadius: '6px', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', marginBottom: '8px' }}>
+              {d.subjects.map((sub, j) => (
+                <div key={j} style={{ height: `${(sub.minutes / chartMaxMins) * 100}%`, background: sub.color, width: '100%', borderTop: j > 0 ? '1px solid var(--bg)' : 'none', transition: 'height 0.4s ease' }} title={`${sub.label}: ${sub.minutes}m`} />
+              ))}
             </div>
-         ))}
-
-         {/* Heatmap Boxes */}
-         {days.map((d, i) => {
-            if (d.isBlank) return <div key={`blank-${i}`} style={{ width: '100%', height: '100%' }} />;
-            
-            if (d.isFuture) {
-               return (
-                 <div key={i} className="heat-box" 
-                      style={{ 
-                        width: '100%', height: '100%', borderRadius: 'min(3px, 0.3vw)',
-                        backgroundColor: 'transparent', 
-                        border: '1px dashed var(--border)', 
-                        opacity: 0.3,
-                        cursor: 'default'
-                      }} 
-                      title={`${d.dateStr} (Upcoming)`} />
-               );
-            }
-            
-            let intensity = 0; 
-            if (d.mins > 0) {
-               const pct = d.mins / (dailyGoal * 60);
-               if (pct >= 1) intensity = 1;
-               else if (pct >= 0.75) intensity = 0.8;
-               else if (pct >= 0.4) intensity = 0.55;
-               else intensity = 0.3;
-            }
-            const isEmpty = intensity === 0;
-            
-            return (
-              <div key={i} className="heat-box" 
-                   style={{ 
-                     width: '100%', height: '100%', borderRadius: 'min(3px, 0.3vw)',
-                     backgroundColor: isEmpty ? 'var(--bg)' : 'var(--accent)', 
-                     opacity: isEmpty ? 0.7 : intensity,
-                     border: isEmpty ? '1px solid var(--border)' : 'none'
-                   }} 
-                   title={`${d.dateStr}: ${d.mins} min`} />
-            );
-         })}
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold', height: '14px', lineHeight: '14px' }}>{d.label}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-export default function Dashboard({ settings, onClose }) {
-  const [sessions, setSessions] = useState(getSessions);
-  const todayStr = getTodayStr();
 
-  const todayMin = sessions.filter(s => s.date === todayStr).reduce((a, s) => a + s.durationMinutes, 0);
-  const h = Math.floor(todayMin / 60), m = todayMin % 60;
-  const progress = Math.min(100, Math.round((todayMin / (settings.dailyGoal * 60)) * 100));
+// ================================================================
+// HEATMAP 
+// ================================================================
+function Heatmap({ sessions, dailyGoal, isMobile }) {
+  const today = new Date();
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - 364);
+  while (startDate.getDay() !== 0) {
+    startDate.setDate(startDate.getDate() - 1);
+  }
 
-  // Deep Stats Calculations
-  const totalMin = sessions.reduce((a, s) => a + s.durationMinutes, 0);
-  const totalH = Math.floor(totalMin / 60);
-  const longestSession = sessions.length ? Math.max(...sessions.map(s => s.durationMinutes)) : 0;
-  
-  // Streak Calculation
-  const dailyGoalMin = settings.dailyGoal * 60;
-  const dateMap = {};
-  sessions.forEach(s => { dateMap[s.date] = (dateMap[s.date] || 0) + s.durationMinutes; });
-  
-  let streak = 0;
-  let d = new Date();
-  let checkStr = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
-  
-  if (dateMap[checkStr] >= dailyGoalMin) {
-     streak++;
-     d.setDate(d.getDate() - 1);
+  const daysMap = {};
+  sessions.forEach(s => {
+    daysMap[s.date] = (daysMap[s.date] || 0) + s.durationMinutes;
+  });
+
+  const totalDays = Math.floor((today - startDate) / (1000 * 60 * 60 * 24)) + 1;
+  const grid = [];
+  for (let i = 0; i < totalDays; i++) {
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + i);
+    const offset = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - offset * 60000);
+    const dateStr = local.toISOString().split('T')[0];
+    
+    const mins = daysMap[dateStr] || 0;
+    let intensity = 0;
+    if (mins > 0) {
+      const ratio = mins / (dailyGoal * 60); 
+      if (ratio >= 1) intensity = 4;
+      else if (ratio >= 0.66) intensity = 3;
+      else if (ratio >= 0.33) intensity = 2;
+      else intensity = 1;
+    }
+    grid.push({ date: dateStr, intensity, mins });
+  }
+
+  const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+  if (isMobile) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflowY: 'auto', paddingRight: '5px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: '8px' }}>
+          {dayLabels.map((lbl, i) => (
+            <div key={i} style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>{lbl}</div>
+          ))}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', paddingBottom: '20px' }}>
+          {grid.map((cell, i) => (
+            <div 
+              key={i} 
+              title={`${cell.date}: ${cell.mins} mins`}
+              style={{ 
+                aspectRatio: '1', 
+                background: cell.intensity === 0 ? 'var(--card2)' : `rgba(76, 175, 80, ${cell.intensity * 0.25})`, 
+                borderRadius: '4px',
+                border: cell.date === getTodayStr() ? '2px solid var(--accent)' : '1px solid rgba(255,255,255,0.05)'
+              }} 
+            />
+          ))}
+        </div>
+      </div>
+    );
   } else {
-     d.setDate(d.getDate() - 1);
-     checkStr = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+    const weeks = [];
+    for (let i = 0; i < grid.length; i += 7) {
+      weeks.push(grid.slice(i, i + 7));
+    }
+    return (
+      <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '10px', height: '100%', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', justifyContent: 'space-between', paddingRight: '8px' }}>
+           {dayLabels.map((lbl, i) => (
+             <div key={i} style={{ fontSize: '0.75rem', color: 'var(--text-muted)', height: '14px', lineHeight: '14px', fontWeight: 'bold' }}>{lbl}</div>
+           ))}
+        </div>
+        {weeks.map((week, wIdx) => (
+          <div key={wIdx} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {week.map((cell, i) => (
+              <div 
+                key={i} 
+                title={`${cell.date}: ${cell.mins} mins`}
+                style={{ 
+                  width: '14px', height: '14px', 
+                  background: cell.intensity === 0 ? 'var(--card2)' : `rgba(76, 175, 80, ${cell.intensity * 0.25})`, 
+                  borderRadius: '3px',
+                  border: cell.date === getTodayStr() ? '2px solid var(--accent)' : 'none'
+                }} 
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    );
   }
-  
-  while (true) {
-     checkStr = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
-     if (dateMap[checkStr] >= dailyGoalMin) {
-         streak++;
-         d.setDate(d.getDate() - 1);
-     } else {
-         break;
-     }
-  }
+}
 
-  function handleDelete(id) {
-    deleteSession(id);
+// ================================================================
+// MAIN DASHBOARD COMPONENT
+// ================================================================
+export default function Dashboard({ settings, onClose }) {
+  const [sessions, setSessions] = useState([]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
     setSessions(getSessions());
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleDelete = (id) => {
+    if(window.confirm("Delete this session?")) {
+      deleteSession(id);
+      setSessions(getSessions());
+    }
+  };
+
+  const todayStr = getTodayStr();
+  const todayMins = sessions.filter(s => s.date === todayStr).reduce((a, s) => a + s.durationMinutes, 0);
+  const totalMins = sessions.reduce((a, s) => a + s.durationMinutes, 0);
+  const totalH = Math.floor(totalMins / 60);
+  const totalM = totalMins % 60;
+
+  const uniqueDays = [...new Set(sessions.map(s => s.date))].sort().reverse();
+  let currentStreak = 0;
+  let checkDate = new Date();
+  for (let i = 0; i < 365; i++) {
+    const offset = checkDate.getTimezoneOffset();
+    const local = new Date(checkDate.getTime() - offset * 60000);
+    const ds = local.toISOString().split('T')[0];
+    if (uniqueDays.includes(ds)) currentStreak++;
+    else if (i !== 0) break;
+    checkDate.setDate(checkDate.getDate() - 1);
   }
 
-  function downloadCSV() {
-    if (sessions.length === 0) return alert("No data to export!");
-    const headers = ["ID", "Date", "Subject", "Duration (Minutes)"];
-    const rows = sessions.map(s => [s.id, s.date, `"${s.subject}"`, s.durationMinutes]);
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "detox_timer_data.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
+  // --- REUSABLE CARDS ---
+  const TodaysFocusCard = () => (
+    <div className={`bento-card ${!isMobile ? 'col-span-2' : ''}`} style={!isMobile ? { background: 'var(--accent)', color: '#000', border: 'none' } : { background: 'var(--accent)', color: '#000', border: 'none' }}>
+      <div style={{ fontSize: '0.9rem', fontWeight: '800', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.5rem', opacity: 0.8 }}>Today's Focus</div>
+      <div style={{ fontSize: '3rem', fontWeight: '800', lineHeight: 1 }}>{todayMins} <span style={{ fontSize: '1.2rem' }}>mins</span></div>
+      <div style={{ marginTop: 'auto', fontSize: '0.9rem', fontWeight: '600' }}>Goal: {settings.dailyGoal} hours</div>
+    </div>
+  );
 
-  const recent = [...sessions].reverse().slice(0, 15);
+  const StatsCard = () => (
+    <div className="bento-card">
+      <div className="chart-title" style={{ marginBottom: '1rem' }}>Deep Stats</div>
+      <div className="stat-group">
+        <div className="stat-item">
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Current Streak</div>
+          <div className="stat-val" style={{ color: 'var(--accent)' }}>{currentStreak} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>days</span></div>
+        </div>
+        <div className="stat-item">
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>All Time</div>
+          <div className="stat-val">{totalH}<span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>h</span> {totalM}<span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>m</span></div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const BarChartCard = () => (
+    <div className={`bento-card ${!isMobile ? 'col-span-2' : ''}`} style={{ display: 'flex', flexDirection: 'column', flex: isMobile ? 1 : 'none', minHeight: isMobile ? '0' : '260px' }}>
+      <div className="chart-title">Activity — Past 7 Days</div>
+      <BarChart dailyGoal={settings.dailyGoal} />
+    </div>
+  );
+
+  const RecentCard = () => (
+    <div className="bento-card" style={{ display: 'flex', flexDirection: 'column', flex: isMobile ? 1 : 'none', minHeight: isMobile ? '0' : '260px', overflow: 'hidden' }}>
+      <div className="chart-title">Recent Sessions</div>
+      <div style={{ flex: 1, overflowY: 'auto', paddingRight: '5px' }}>
+        {sessions.length === 0 ? (
+           <div style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: '20px' }}>No sessions yet.</div>
+        ) : (
+           [...sessions].reverse().slice(0, 15).map(s => {
+              const dObj = new Date(s.date);
+              const dateStr = dObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+              const subColor = typeof getGlobalSubjectColor === 'function' ? getGlobalSubjectColor(s.subject) : 'var(--text)';
+              return (
+                <div className="session-entry" key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+                  <div>
+                    <div className="session-sub" style={{ fontWeight: 'bold', fontSize: '0.95rem', color: subColor }}>{s.subject || 'Study'}</div>
+                    <span className="session-dur" style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>{s.durationMinutes} min</span>
+                  </div>
+                  <div className="session-actions" style={{ display: 'flex', alignItems: 'center' }}>
+                    <span className="session-time" style={{ marginRight: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{dateStr}</span>
+                    <button className="btn-del" onClick={() => handleDelete(s.id)} title="Delete" style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: '1.2rem' }}>✕</button>
+                  </div>
+                </div>
+              );
+           })
+        )}
+      </div>
+    </div>
+  );
+
+  const HeatmapCard = () => (
+    <div className={`bento-card ${!isMobile ? 'col-span-3' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="chart-title">Consistency ({new Date().getFullYear()})</div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', overflow: 'hidden', paddingTop: '10px' }}>
+         <Heatmap sessions={sessions} dailyGoal={settings.dailyGoal} isMobile={isMobile} />
+      </div>
+    </div>
+  );
 
   return (
-    <div className="dash-overlay">
-      <div className="dash-navbar">
-        <button className="icon-btn" onClick={onClose} title="Back">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
-          </svg>
-        </button>
-        <span className="dash-title">Dashboard</span>
-        <button className="icon-btn" onClick={downloadCSV} title="Export CSV Data">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-        </button>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--bg)', zIndex: 1500, display: 'flex', flexDirection: 'column' }}>
+      
+      {/* HEADER */}
+      <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg2)' }}>
+        <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 'bold', letterSpacing: '0.1em' }}>DASHBOARD</h2>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text)', fontSize: '2rem', cursor: 'pointer', lineHeight: 0.8 }}>&times;</button>
       </div>
 
-      {/* Vertical Snap Scroll Container */}
-      <div style={{ flex: 1, overflowY: 'auto', scrollSnapType: 'y mandatory', scrollBehavior: 'smooth' }}>
+      {/* SCROLLABLE CONTENT AREA */}
+      <div style={{ flex: 1, overflowY: 'auto', scrollSnapType: 'y mandatory' }}>
         
-        {/* PAGE 1: Overview Dashboard */}
-        <div style={{ height: 'calc(100vh - 56px)', scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column' }}>
-          <div className="bento-grid" style={{ flex: 1, gridTemplateRows: 'auto minmax(0, 1fr)', padding: '1.25rem 1.25rem 0.5rem 1.25rem', minHeight: 0 }}>
-            
-            {/* Top Left: Today's Focus */}
-            <div className="bento-card">
-              <div className="chart-title">Today's Focus</div>
-              <div className="stat-val" style={{ fontSize: '2.5rem', margin: '0.5rem 0' }}>{h}h {m}m</div>
-              <div style={{ marginTop: 'auto', width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  <span>Daily Goal Progress</span>
-                  <span>{progress}%</span>
-                </div>
-                <div style={{ height: '6px', background: 'var(--bg)', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${progress}%`, background: 'var(--accent)', borderRadius: '3px', transition: 'width 0.3s ease' }}></div>
-                </div>
+        {isMobile ? (
+          <>
+            {/* MOBILE PAGE 1: Today & Stats */}
+            <div style={{ height: 'calc(100vh - 65px)', scrollSnapAlign: 'start', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <TodaysFocusCard />
+              <StatsCard />
+              <div style={{ marginTop: 'auto', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem', letterSpacing: '0.1em' }}>↓ Swipe for Charts ↓</div>
+            </div>
+
+            {/* MOBILE PAGE 2: Bar Graph & Recent */}
+            <div style={{ height: 'calc(100vh - 65px)', scrollSnapAlign: 'start', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <BarChartCard />
+              <RecentCard />
+              <div style={{ marginTop: 'auto', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem', letterSpacing: '0.1em' }}>↓ Swipe for Heatmap ↓</div>
+            </div>
+
+            {/* MOBILE PAGE 3: Consistency (Vertical) */}
+            <div style={{ height: 'calc(100vh - 65px)', scrollSnapAlign: 'start', padding: '1rem', display: 'flex', flexDirection: 'column' }}>
+              <HeatmapCard />
+            </div>
+          </>
+        ) : (
+          <>
+            {/* DESKTOP PAGE 1: Original Bento Grid */}
+            <div style={{ height: 'calc(100vh - 56px)', scrollSnapAlign: 'start', padding: '1.25rem', display: 'flex', flexDirection: 'column' }}>
+              <div className="bento-grid">
+                <TodaysFocusCard />
+                <StatsCard />
+                <BarChartCard />
+                <RecentCard />
+              </div>
+              <div style={{ textAlign: 'center', paddingBottom: '0.75rem', color: 'var(--text-muted)', fontSize: '0.75rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                ↓ Scroll Down For Full Year Consistency ↓
               </div>
             </div>
 
-            {/* Top Right: Deep Stats */}
-            <div className="bento-card col-span-2">
-               <div className="chart-title">Deep Stats &amp; Streaks</div>
-               <div className="stat-group" style={{ marginTop: '0.5rem', height: '100%' }}>
-                  <div className="stat-item">
-                     <div className="stat-val" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>{streak} <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c-2.2 0-4-1.8-4-4a8 8 0 0 1 14 6c0 4.4-3.6 8-8 8a8 8 0 0 1-8-8c1.7 0 2.5.5 2.5 2.5z"></path></svg></div>
-                     <div className="stat-label">Day Streak</div>
-                  </div>
-                  <div className="stat-item">
-                     <div className="stat-val">{totalH} <span style={{fontSize:'1rem'}}>hrs</span></div>
-                     <div className="stat-label">Total Focus Time</div>
-                  </div>
-                  <div className="stat-item">
-                     <div className="stat-val">{longestSession} <span style={{fontSize:'1rem'}}>min</span></div>
-                     <div className="stat-label">Longest Session</div>
-                  </div>
-               </div>
+            {/* DESKTOP PAGE 2: Horizontal Heatmap */}
+            <div style={{ height: 'calc(100vh - 56px)', scrollSnapAlign: 'start', padding: '1.25rem', display: 'flex', flexDirection: 'column' }}>
+              <HeatmapCard />
             </div>
+          </>
+        )}
 
-            {/* Middle Left: Bar Chart */}
-            <div className="bento-card col-span-2">
-              <div className="chart-title">Activity — Past 7 Days</div>
-              <div className="chart-wrap" style={{ marginTop: 'auto', height: '100%', display: 'flex', alignItems: 'flex-end' }}><BarChart /></div>
-            </div>
-
-            {/* Middle Right: Recent Subjects / Sessions */}
-            <div className="bento-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div className="chart-title" style={{ padding: '1.25rem 1.25rem 0 1.25rem' }}>Recent Sessions</div>
-              <div className="sessions-scroll" style={{ padding: '0 1.25rem 1.25rem 1.25rem', flex: 1, overflowY: 'auto' }}>
-                {recent.length === 0 && <div className="empty-msg">No sessions yet. Start focusing!</div>}
-                {recent.map(s => {
-                  const d = new Date(s.id * 1000);
-                  let h = d.getHours();
-                  const m = String(d.getMinutes()).padStart(2, '0');
-                  let ampm = '';
-
-                  if (settings.clockFormat === '12h') {
-                    ampm = h >= 12 ? ' PM' : ' AM';
-                    h = h % 12 || 12;
-                  }
-
-                  const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-                  const timeStr = `${String(h).padStart(2, '0')}:${m}${ampm}`;
-
-                  return (
-                    <div className="session-row" key={s.id}>
-                      <div className="session-info">
-                        <span className="session-subject" style={{ color: getGlobalSubjectColor(s.subject), fontWeight: '600' }}>{s.subject}</span>
-                        <span className="session-dur">{s.durationMinutes} min</span>
-                      </div>
-                      <div className="session-actions">
-                        <span className="session-time" style={{ marginRight: '8px' }}>{dateStr}, {timeStr}</span>
-                        <button className="btn-del" onClick={() => handleDelete(s.id)} title="Delete">✕</button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-          </div>
-          
-          {/* Scroll Hint */}
-          <div style={{ textAlign: 'center', paddingBottom: '0.75rem', color: 'var(--text-muted)', fontSize: '0.75rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-            ↓ Scroll Down For Full Year Consistency ↓
-          </div>
-        </div>
-
-        {/* PAGE 2: Full Screen Consistency Heatmap */}
-        <div style={{ height: 'calc(100vh - 56px)', scrollSnapAlign: 'start', padding: '1.25rem', display: 'flex', flexDirection: 'column' }}>
-          <div className="bento-card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div className="chart-title">Consistency ({new Date().getFullYear()})</div>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-               <Heatmap sessions={sessions} dailyGoal={settings.dailyGoal} />
-            </div>
-          </div>
-        </div>
-        
       </div>
     </div>
   );

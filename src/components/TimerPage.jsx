@@ -168,6 +168,49 @@ export default function TimerPage({ settings, onStateChange }) {
 
   const active = isRunning || isPaused;
 
+  if (active) {
+    return (
+      <div className="running-page-wrapper">
+        {/* (1) Subject Name/Phase at top */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+          {mode === 'pomodoro' && (
+            <div className={`phase-pill${phase === 'study' ? ' study' : ' break-phase'}`}>
+              {phase === 'study' ? '● Study' : '● Break'}
+            </div>
+          )}
+          <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>
+            {subject.trim() || 'Study'} Session
+          </div>
+        </div>
+
+        {/* (2) DYNAMIC SPACED CLOCK BLOCK */}
+        <div className="dynamic-flip-wrapper">
+          <div className="dynamic-flip-clock">
+            <FlipDisplay seconds={timeLeft} showHours={true} />
+          </div>
+        </div>
+
+        {/* (3) Controls at bottom */}
+        <div className="controls" style={{ marginTop: 'auto', marginBottom: '1.5rem' }}>
+          {isRunning && (
+            <>
+              {!settings.strictMode && (
+                <button className="ctrl-btn ctrl-btn-outline" onClick={handlePause}>⏸ PAUSE</button>
+              )}
+              <button className="ctrl-btn ctrl-btn-outline" onClick={handleStopClick}>⏹ STOP</button>
+            </>
+          )}
+          {isPaused && (
+            <>
+              <button className="ctrl-btn ctrl-btn-resume" onClick={handleResume}>▶ RESUME</button>
+              <button className="ctrl-btn ctrl-btn-outline" onClick={handleStopClick}>⏹ STOP</button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="page" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
 
@@ -196,66 +239,40 @@ export default function TimerPage({ settings, onStateChange }) {
         </div>
       )}
 
-      {/* Subject and Phase Info (Moves to Top when Active) */}
+      {/* Subject and Phase Info (Moves to Top when Inactive, but here it's only rendered when Inactive since Active redirects to running-page-wrapper) */}
       <div style={{
-        position: active ? 'absolute' : 'relative',
-        top: active ? '8%' : 'auto',
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-        transform: active ? 'scale(1.3)' : 'scale(1)',
         zIndex: 10
       }}>
-        {mode === 'pomodoro' && active && (
-          <div className={`phase-pill${phase === 'study' ? ' study' : ' break-phase'}`} style={{ marginBottom: '10px' }}>
-            {phase === 'study' ? '● Study' : '● Break'}
-          </div>
-        )}
         <div className="subject-wrap" style={{ margin: 0 }}>
           <input
-            className={`subject-input${active ? ' locked' : ''}`}
+            className="subject-input"
             type="text"
             placeholder="What are you studying?"
             value={subject}
             onChange={e => setSubject(e.target.value)}
-            readOnly={active}
             maxLength={50}
           />
         </div>
       </div>
 
-      {/* Clock Wrapper (Scales up 2.8x when Active) */}
+      {/* Clock Wrapper (Normal scale when Inactive) */}
       <div style={{
-        transform: active ? 'scale(2.8)' : 'scale(1)',
-        transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
-        marginTop: active ? '0' : '20px',
+        marginTop: '20px',
         zIndex: 5
       }}>
         <FlipDisplay seconds={timeLeft} />
       </div>
 
-      {/* Controls (Moved to bottom when running, kept fully visible) */}
+      {/* Controls */}
       <div className="controls" style={{
-        position: active ? 'absolute' : 'relative',
-        bottom: active ? '10%' : 'auto',
-        marginTop: active ? '0' : '30px',
-        transition: 'all 0.5s ease',
+        marginTop: '30px',
         zIndex: 10
       }}>
-        {!active && (
-          <button className="ctrl-btn ctrl-btn-primary" onClick={handleStart}>▶ START</button>
-        )}
-        {isRunning && <>
-          {!settings.strictMode && (
-            <button className="ctrl-btn ctrl-btn-outline" onClick={handlePause}>⏸ PAUSE</button>
-          )}
-          <button className="ctrl-btn ctrl-btn-outline" onClick={handleStopClick}>⏹ STOP</button>
-        </>}
-        {isPaused && <>
-          <button className="ctrl-btn ctrl-btn-resume" onClick={handleResume}>▶ RESUME</button>
-          <button className="ctrl-btn ctrl-btn-outline" onClick={handleStopClick}>⏹ STOP</button>
-        </>}
+        <button className="ctrl-btn ctrl-btn-primary" onClick={handleStart}>▶ START</button>
       </div>
     </div>
   );

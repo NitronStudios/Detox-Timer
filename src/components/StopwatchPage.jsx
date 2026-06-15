@@ -60,17 +60,62 @@ export default function StopwatchPage({ onStateChange }) {
     }
   }
 
+  if (isActive) {
+    return (
+      <div className="running-page-wrapper">
+        {/* (1) Subject Name/Stopwatch title at top */}
+        <div className="phase-pill study" style={{ fontSize: '0.85rem', padding: '0.4rem 1.2rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+          ● {subject.trim() || 'Flow Session'}
+        </div>
+
+        {/* (2) DYNAMIC SPACED CLOCK BLOCK */}
+        <div className="dynamic-flip-wrapper">
+          <div className="dynamic-flip-clock">
+            <FlipDisplay seconds={elapsed} showHours={true} />
+          </div>
+        </div>
+
+        {/* (3) Controls at bottom */}
+        <div className="controls" style={{ marginTop: 'auto', marginBottom: '1.5rem' }}>
+          {isRunning && (
+            <>
+              <button className="ctrl-btn ctrl-btn-outline" onClick={() => setIsRunning(false)}>⏸ PAUSE</button>
+              <button className="ctrl-btn ctrl-btn-outline" onClick={handleLap}>⧗ LAP</button>
+            </>
+          )}
+          {!isRunning && elapsed > 0 && (
+            <>
+              <button className="ctrl-btn ctrl-btn-resume" onClick={() => setIsRunning(true)}>▶ RESUME</button>
+              <button className="ctrl-btn ctrl-btn-outline" onClick={handleSave}>⏹ SAVE & STOP</button>
+              <button className="icon-btn" style={{ height: 'clamp(45px, 6vh, 55px)', width: 'clamp(45px, 6vh, 55px)' }} onClick={handleDiscard} title="Discard">✕</button>
+            </>
+          )}
+        </div>
+
+        {laps.length > 0 && (
+          <div className="laps-container" style={{ maxHeight: '150px', overflowY: 'auto', width: '100%', maxWidth: '300px', marginTop: '1rem' }}>
+            {[...laps].reverse().map(l => (
+              <div className="lap-entry" key={l.num}>
+                <span className="lap-num">Lap {l.num}</span>
+                <span>{l.time}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="page" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
 
       <div className="subject-wrap" style={{ margin: 0, marginBottom: '2rem' }}>
         <input
-          className={`subject-input${isRunning ? ' locked' : ''}`}
+          className="subject-input"
           type="text"
           placeholder="What are you working on?"
           value={subject}
           onChange={e => setSubject(e.target.value)}
-          readOnly={isRunning}
           maxLength={50}
         />
       </div>
@@ -78,30 +123,8 @@ export default function StopwatchPage({ onStateChange }) {
       <FlipDisplay seconds={elapsed} showHours={elapsed >= 3600} />
 
       <div className="controls">
-        {!isRunning && elapsed === 0 && (
-          <button className="ctrl-btn ctrl-btn-primary" onClick={() => setIsRunning(true)}>▶ START</button>
-        )}
-        {isRunning && <>
-          <button className="ctrl-btn ctrl-btn-outline" onClick={() => setIsRunning(false)}>⏸ PAUSE</button>
-          <button className="ctrl-btn ctrl-btn-outline" onClick={handleLap}>⧗ LAP</button>
-        </>}
-        {!isRunning && elapsed > 0 && <>
-          <button className="ctrl-btn ctrl-btn-resume" onClick={() => setIsRunning(true)}>▶ RESUME</button>
-          <button className="ctrl-btn ctrl-btn-outline" onClick={handleSave}>⏹ SAVE & STOP</button>
-          <button className="icon-btn" style={{ height: 'clamp(45px, 6vh, 55px)', width: 'clamp(45px, 6vh, 55px)' }} onClick={handleDiscard} title="Discard">✕</button>
-        </>}
+        <button className="ctrl-btn ctrl-btn-primary" onClick={() => setIsRunning(true)}>▶ START</button>
       </div>
-
-      {laps.length > 0 && (
-        <div className="laps-container">
-          {[...laps].reverse().map(l => (
-            <div className="lap-entry" key={l.num}>
-              <span className="lap-num">Lap {l.num}</span>
-              <span>{l.time}</span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
