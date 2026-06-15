@@ -4,10 +4,8 @@ import PomodoroConfig from './PomodoroConfig';
 import { saveSession } from '../utils/helpers';
 
 export default function TimerPage({ settings, onStateChange }) {
-  const [mode, setMode] = useState('pomodoro');
   const [studyMin, setStudyMin] = useState(settings.studyMin);
   const [breakMin, setBreakMin] = useState(settings.breakMin);
-  const [normalMin, setNormalMin] = useState(settings.normalMin);
   const [phase, setPhase] = useState('study');
   const [timeLeft, setTimeLeft] = useState(settings.studyMin * 60);
   const [elapsed, setElapsed] = useState(0);
@@ -21,29 +19,20 @@ export default function TimerPage({ settings, onStateChange }) {
     if (!isRunning && !isPaused) {
       setStudyMin(settings.studyMin);
       setBreakMin(settings.breakMin);
-      setNormalMin(settings.normalMin);
-      if (mode === 'pomodoro') {
-        setTimeLeft(settings.studyMin * 60);
-        setPhase('study');
-      } else {
-        setTimeLeft(settings.normalMin * 60);
-      }
+      setTimeLeft(settings.studyMin * 60);
+      setPhase('study');
       setElapsed(0);
     }
-  }, [settings.studyMin, settings.breakMin, settings.normalMin, mode, isRunning, isPaused]);
+  }, [settings.studyMin, settings.breakMin, isRunning, isPaused]);
 
   // Sync timeLeft when local steppers change
   useEffect(() => {
     if (!isRunning && !isPaused) {
-      if (mode === 'pomodoro') {
-        setTimeLeft(studyMin * 60);
-        setPhase('study');
-      } else {
-        setTimeLeft(normalMin * 60);
-      }
+      setTimeLeft(studyMin * 60);
+      setPhase('study');
       setElapsed(0);
     }
-  }, [mode, studyMin, normalMin]);
+  }, [studyMin, isRunning, isPaused]);
 
   useEffect(() => {
     if (isRunning) {
@@ -69,7 +58,6 @@ export default function TimerPage({ settings, onStateChange }) {
     return () => clearInterval(intervalRef.current);
   }, [isRunning]);
 
-  // Tab Title Timer effect
   useEffect(() => {
     if (isRunning || isPaused) {
       const m = Math.floor(timeLeft / 60);
@@ -80,17 +68,35 @@ export default function TimerPage({ settings, onStateChange }) {
     } else {
       document.title = "DETOX TIMER — Flip Clock Study Timer";
     }
-    return () => {
-      document.title = "DETOX TIMER — Flip Clock Study Timer";
-    };
+    return () => document.title = "DETOX TIMER — Flip Clock Study Timer";
   }, [timeLeft, isRunning, isPaused]);
 
-  // Track active state for Mini Mode
   useEffect(() => {
-    if (onStateChange) {
-      onStateChange(isRunning || isPaused);
-    }
+    if (onStateChange) onStateChange(isRunning || isPaused);
   }, [isRunning, isPaused, onStateChange]);
+
+  // Background Survival: Restore timer on mount
+  useEffect(() => {
+    const savedTarget = localStorage.getItem('detox_timer_target');
+    if (savedTarget) {
+      const remaining = Math.floor((parseInt(savedTarget) - Date.now()) / 1000);
+      if (remaining > 0) {
+        setTimeLeft(remaining);
+        setIsRunning(true);
+      } else {
+        localStorage.removeItem('detox_timer_target');
+      }
+    }
+  }, []);
+
+  // Background Survival: Save target time when running
+  useEffect(() => {
+    if (isRunning) {
+      localStorage.setItem('detox_timer_target', (Date.now() + timeLeft * 1000).toString());
+    } else {
+      localStorage.removeItem('detox_timer_target');
+    }
+  }, [isRunning, timeLeft]);
 
   const playBeep = () => {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -104,41 +110,31 @@ export default function TimerPage({ settings, onStateChange }) {
   function handlePhaseEnd() {
     setIsRunning(false);
     if (settings.audioEnabled) {
-      try {
-        playBeep();
-      } catch (e) {
-        console.error("Audio Context playback failed:", e);
-      }
+      try { playBeep(); } catch (e) { console.error("Audio Context playback failed:", e); }
     }
-    if (mode === 'pomodoro') {
-      if (phase === 'study') {
-        setPhase('break');
-        setTimeLeft(breakMin * 60);
-        setElapsed(0);
-      } else {
-        setPhase('study');
-        setTimeLeft(studyMin * 60);
-        setElapsed(0);
-      }
+    if (phase === 'study') {
+      setPhase('break');
+      setTimeLeft(breakMin * 60);
+      setElapsed(0);
     } else {
-      handleSave();
+      setPhase('study');
+      setTimeLeft(studyMin * 60);
+      setElapsed(0);
     }
   }
 
-  function handleStart() {
-    setIsRunning(true);
-    setIsPaused(false);
+  function handleStart() { 
+    setIsRunning(true); 
+    setIsPaused(false); 
   }
-
-  function handlePause() {
-    clearInterval(intervalRef.current);
-    setIsRunning(false);
-    setIsPaused(true);
+  function handlePause() { 
+    clearInterval(intervalRef.current); 
+    setIsRunning(false); 
+    setIsPaused(true); 
   }
-
-  function handleResume() {
-    setIsRunning(true);
-    setIsPaused(false);
+  function handleResume() { 
+    setIsRunning(true); 
+    setIsPaused(false); 
   }
 
   function handleSave() {
@@ -149,18 +145,12 @@ export default function TimerPage({ settings, onStateChange }) {
     setSubject('');
     setPhase('study');
     setElapsed(0);
-    if (mode === 'pomodoro') {
-      setTimeLeft(studyMin * 60);
-    } else {
-      setTimeLeft(normalMin * 60);
-    }
+    setTimeLeft(studyMin * 60);
   }
 
   function handleStopClick() {
     if (settings.strictMode) {
-      if (window.confirm('Strict Mode: Are you sure you want to break your focus?')) {
-        handleSave();
-      }
+      if (window.confirm('Strict Mode: Are you sure you want to break your focus?')) handleSave();
     } else {
       handleSave();
     }
@@ -171,32 +161,25 @@ export default function TimerPage({ settings, onStateChange }) {
   if (active) {
     return (
       <div className="running-page-wrapper">
-        {/* (1) Subject Name/Phase at top */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-          {mode === 'pomodoro' && (
-            <div className={`phase-pill${phase === 'study' ? ' study' : ' break-phase'}`}>
-              {phase === 'study' ? '● Study' : '● Break'}
-            </div>
-          )}
+          <div className={`phase-pill${phase === 'study' ? ' study' : ' break-phase'}`}>
+            {phase === 'study' ? '● Study' : '● Break'}
+          </div>
           <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>
             {subject.trim() || 'Study'} Session
           </div>
         </div>
 
-        {/* (2) DYNAMIC SPACED CLOCK BLOCK */}
         <div className="dynamic-flip-wrapper">
           <div className="dynamic-flip-clock">
             <FlipDisplay seconds={timeLeft} showHours={true} />
           </div>
         </div>
 
-        {/* (3) Controls at bottom */}
         <div className="controls" style={{ marginTop: 'auto', marginBottom: '1.5rem' }}>
           {isRunning && (
             <>
-              {!settings.strictMode && (
-                <button className="ctrl-btn ctrl-btn-outline" onClick={handlePause}>⏸ PAUSE</button>
-              )}
+              {!settings.strictMode && <button className="ctrl-btn ctrl-btn-outline" onClick={handlePause}>⏸ PAUSE</button>}
               <button className="ctrl-btn ctrl-btn-outline" onClick={handleStopClick}>⏹ STOP</button>
             </>
           )}
@@ -213,65 +196,23 @@ export default function TimerPage({ settings, onStateChange }) {
 
   return (
     <div className="page" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-
-      {/* Hide Menus Completely When Active */}
       {!active && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', transition: 'all 0.3s' }}>
-          <div className="mode-select">
-            <button className={`mode-btn${mode === 'pomodoro' ? ' active' : ''}`} onClick={() => setMode('pomodoro')}>Pomodoro</button>
-            <button className={`mode-btn${mode === 'normal' ? ' active' : ''}`} onClick={() => setMode('normal')}>Normal</button>
-          </div>
-
-          {mode === 'pomodoro' ? (
-            <PomodoroConfig studyMin={studyMin} breakMin={breakMin} onStudy={setStudyMin} onBreak={setBreakMin} disabled={active} />
-          ) : (
-            <div className="pomo-config">
-              <div className="pomo-field">
-                <span className="pomo-label">Duration (min)</span>
-                <div className="pomo-stepper">
-                  <button onClick={() => setNormalMin(m => Math.max(1, m - 5))} disabled={active || normalMin <= 1}>−</button>
-                  <span className="pomo-value">{normalMin}</span>
-                  <button onClick={() => setNormalMin(m => Math.min(120, m + 5))} disabled={active || normalMin >= 120}>+</button>
-                </div>
-              </div>
-            </div>
-          )}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', transition: 'all 0.3s', marginBottom: '1.5rem' }}>
+          <PomodoroConfig studyMin={studyMin} breakMin={breakMin} onStudy={setStudyMin} onBreak={setBreakMin} disabled={active} />
         </div>
       )}
 
-      {/* Subject and Phase Info (Moves to Top when Inactive, but here it's only rendered when Inactive since Active redirects to running-page-wrapper) */}
-      <div style={{
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        zIndex: 10
-      }}>
+      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 10 }}>
         <div className="subject-wrap" style={{ margin: 0 }}>
-          <input
-            className="subject-input"
-            type="text"
-            placeholder="What are you studying?"
-            value={subject}
-            onChange={e => setSubject(e.target.value)}
-            maxLength={50}
-          />
+          <input className="subject-input" type="text" placeholder="What are you studying?" value={subject} onChange={e => setSubject(e.target.value)} maxLength={50} />
         </div>
       </div>
 
-      {/* Clock Wrapper (Normal scale when Inactive) */}
-      <div style={{
-        marginTop: '20px',
-        zIndex: 5
-      }}>
+      <div style={{ marginTop: '20px', zIndex: 5 }}>
         <FlipDisplay seconds={timeLeft} />
       </div>
 
-      {/* Controls */}
-      <div className="controls" style={{
-        marginTop: '30px',
-        zIndex: 10
-      }}>
+      <div className="controls" style={{ marginTop: '30px', zIndex: 10 }}>
         <button className="ctrl-btn ctrl-btn-primary" onClick={handleStart}>▶ START</button>
       </div>
     </div>

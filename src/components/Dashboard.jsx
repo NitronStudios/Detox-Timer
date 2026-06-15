@@ -191,7 +191,7 @@ function Heatmap({ sessions, dailyGoal, isMobile }) {
 // ================================================================
 // MAIN DASHBOARD COMPONENT
 // ================================================================
-export default function Dashboard({ settings, onClose }) {
+export default function Dashboard({ settings, onClose, setShowManualLog }) {
   const [sessions, setSessions] = useState([]);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -229,24 +229,24 @@ export default function Dashboard({ settings, onClose }) {
 
   // --- REUSABLE CARDS ---
   const TodaysFocusCard = () => (
-    <div className={`bento-card ${!isMobile ? 'col-span-2' : ''}`} style={!isMobile ? { background: 'var(--accent)', color: '#000', border: 'none' } : { background: 'var(--accent)', color: '#000', border: 'none' }}>
-      <div style={{ fontSize: '0.9rem', fontWeight: '800', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.5rem', opacity: 0.8 }}>Today's Focus</div>
-      <div style={{ fontSize: '3rem', fontWeight: '800', lineHeight: 1 }}>{todayMins} <span style={{ fontSize: '1.2rem' }}>mins</span></div>
-      <div style={{ marginTop: 'auto', fontSize: '0.9rem', fontWeight: '600' }}>Goal: {settings.dailyGoal} hours</div>
+    <div className={`bento-card ${!isMobile ? 'col-span-2' : ''}`} style={{ background: 'var(--accent)', color: '#000', border: 'none', flex: isMobile ? 1 : 'none', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ fontSize: isMobile ? '1rem' : '0.9rem', fontWeight: '800', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: isMobile ? '1rem' : '0.5rem', opacity: 0.8 }}>Today's Focus</div>
+      <div style={{ fontSize: isMobile ? '4.5rem' : '3rem', fontWeight: '800', lineHeight: 1, marginTop: isMobile ? 'auto' : '0' }}>{todayMins} <span style={{ fontSize: isMobile ? '1.5rem' : '1.2rem' }}>mins</span></div>
+      <div style={{ marginTop: 'auto', fontSize: isMobile ? '1.1rem' : '0.9rem', fontWeight: '600' }}>Goal: {settings.dailyGoal} hours</div>
     </div>
   );
 
   const StatsCard = () => (
-    <div className="bento-card">
-      <div className="chart-title" style={{ marginBottom: '1rem' }}>Deep Stats</div>
-      <div className="stat-group">
-        <div className="stat-item">
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Current Streak</div>
-          <div className="stat-val" style={{ color: 'var(--accent)' }}>{currentStreak} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>days</span></div>
+    <div className="bento-card" style={{ flex: isMobile ? 1 : 'none', display: 'flex', flexDirection: 'column' }}>
+      <div className="chart-title" style={{ marginBottom: isMobile ? '1.5rem' : '1rem', fontSize: isMobile ? '0.85rem' : '0.75rem' }}>Deep Stats</div>
+      <div className="stat-group" style={{ flex: 1, display: 'flex', gap: '1rem' }}>
+        <div className="stat-item" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div style={{ fontSize: isMobile ? '0.9rem' : '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Current Streak</div>
+          <div className="stat-val" style={{ color: 'var(--accent)', fontSize: isMobile ? '2.2rem' : '1.6rem' }}>{currentStreak} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>days</span></div>
         </div>
-        <div className="stat-item">
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>All Time</div>
-          <div className="stat-val">{totalH}<span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>h</span> {totalM}<span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>m</span></div>
+        <div className="stat-item" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div style={{ fontSize: isMobile ? '0.9rem' : '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>All Time</div>
+          <div className="stat-val" style={{ fontSize: isMobile ? '2.2rem' : '1.6rem' }}>{totalH}<span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>h</span> {totalM}<span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>m</span></div>
         </div>
       </div>
     </div>
@@ -315,6 +315,36 @@ export default function Dashboard({ settings, onClose }) {
             <div style={{ height: 'calc(100vh - 65px)', scrollSnapAlign: 'start', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <TodaysFocusCard />
               <StatsCard />
+              
+              {/* NEW: Themed Quick Action Button */}
+              <button 
+                onClick={() => { onClose(); setShowManualLog(true); }}
+                style={{ 
+                  marginTop: '0.5rem',
+                  width: '100%', 
+                  padding: '1.25rem', 
+                  background: 'var(--card)', 
+                  border: '1px solid var(--border)', 
+                  borderRadius: '12px', 
+                  color: 'var(--text)', 
+                  fontSize: '1rem', 
+                  fontWeight: '600', 
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  gap: '12px',
+                  boxShadow: 'var(--shadow)',
+                  transition: 'var(--transition)'
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Add Manual Log
+              </button>
+
               <div style={{ marginTop: 'auto', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem', letterSpacing: '0.1em' }}>↓ Swipe for Charts ↓</div>
             </div>
 

@@ -15,7 +15,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authChecking, setAuthChecking] = useState(true);
 
-  const [tab, setTab] = useState('Timer');
+  const [tab, setTab] = useState('Pomodoro');
   const [showDash, setShowDash] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showManualLog, setShowManualLog] = useState(false);
@@ -184,17 +184,17 @@ export default function App() {
 
       <div className="app-main">
         <div
-          className={`page-wrapper ${tab === 'Timer' ? 'active' : timerActive ? 'mini' : 'hidden'}`}
-          onClick={() => { if (tab !== 'Timer' && timerActive) setTab('Timer'); }}
-          title={tab !== 'Timer' && timerActive ? "Click to return to Timer" : ""}
+          className={`page-wrapper ${tab === 'Pomodoro' ? 'active' : timerActive ? 'mini' : 'hidden'}`}
+          onClick={() => { if (tab !== 'Pomodoro' && timerActive) setTab('Pomodoro'); }}
+          title={tab !== 'Pomodoro' && timerActive ? "Click to return to Pomodoro" : ""}
         >
           <TimerPage onStateChange={setTimerActive} settings={settings} />
         </div>
 
         <div
-          className={`page-wrapper ${tab === 'Stopwatch' ? 'active' : stopwatchActive ? 'mini' : 'hidden'}`}
-          onClick={() => { if (tab !== 'Stopwatch' && stopwatchActive) setTab('Stopwatch'); }}
-          title={tab !== 'Stopwatch' && stopwatchActive ? "Click to return to Stopwatch" : ""}
+          className={`page-wrapper ${tab === 'Timer' ? 'active' : stopwatchActive ? 'mini' : 'hidden'}`}
+          onClick={() => { if (tab !== 'Timer' && stopwatchActive) setTab('Timer'); }}
+          title={tab !== 'Timer' && stopwatchActive ? "Click to return to Timer" : ""}
         >
           <StopwatchPage onStateChange={setStopwatchActive} />
         </div>
@@ -204,7 +204,7 @@ export default function App() {
         </div>
       </div>
 
-      {showDash && <Dashboard settings={settings} onClose={() => setShowDash(false)} />}
+      {showDash && <Dashboard settings={settings} setShowManualLog={setShowManualLog} onClose={() => setShowDash(false)} />}
       {showSettings && <Settings settings={settings} setSettings={setSettings} theme={theme} cycleTheme={cycleTheme} onClose={() => setShowSettings(false)} />}
       {showManualLog && <ManualLogModal onClose={() => setShowManualLog(false)} />}
       {showLeaderboard && <LeaderboardModal onClose={() => setShowLeaderboard(false)} />}

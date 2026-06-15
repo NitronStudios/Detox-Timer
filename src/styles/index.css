@@ -265,12 +265,37 @@
       user-select: none;
     }
 
-    .flip-card {
-      position: relative;
-      width: clamp(70px, 10vw, 130px);
-      height: clamp(100px, 14vw, 185px);
-      perspective: 600px;
-    }
+/* ================================================================
+   FLIP CARD BASE (Horizontal / Desktop Default)
+   ================================================================ */
+.flip-card {
+    position: relative;
+    /* FIX: Replaced clamp with min(vw, vh) so it perfectly scales up on large desktops without arbitrary pixel caps */
+    --dynamic-width: min(15vw, 25vh); 
+    --dynamic-height: calc(var(--dynamic-width) * 1.5);
+    
+    --dynamic-radius: clamp(4px, calc(var(--dynamic-width) * 0.10), 24px);
+    
+    width: var(--dynamic-width);
+    height: var(--dynamic-height);
+    font-size: calc(var(--dynamic-height) * 0.7);
+    font-weight: bold;
+    line-height: var(--dynamic-height);
+    perspective: 1000px;
+    color: var(--accent-color-on);
+}
+
+.flip-display-container {
+    display: flex;
+    justify-content: center;
+    width: auto;
+    height: auto;
+}
+
+.flip-card-back {
+    transform: rotateX(-180px);
+    line-height: var(--dynamic-height); /* Keep back in sync with card height */
+}
 
     .flip-card-inner {
       position: relative;
@@ -278,47 +303,28 @@
       height: 100%;
     }
 
-    /* Static top half — shows current digit (top portion) */
+    /* Static top half */
     .fc-top {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 50%;
+      top: 0; left: 0; width: 100%; height: 50%;
       background: var(--card);
-      /* Only round the outer (top) corners; keep inner edge sharp */
-      border-top-left-radius: 10px;
-      border-top-right-radius: 10px;
+      border-top-left-radius: var(--dynamic-radius);
+      border-top-right-radius: var(--dynamic-radius);
       border-bottom-left-radius: 0;
       border-bottom-right-radius: 0;
-      overflow: hidden;
-      display: flex;
-      align-items: flex-end;
-      /* digit text aligns to split edge */
-      justify-content: center;
-      line-height: 0;
-      /* magic fix: centres text exactly on split */
+      overflow: hidden; display: flex; align-items: flex-end; justify-content: center; line-height: 0;
     }
 
-    /* Static bottom half — shows current digit (bottom portion) */
+    /* Static bottom half */
     .fc-bottom {
       position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 50%;
+      bottom: 0; left: 0; width: 100%; height: 50%;
       background: var(--card);
-      /* Only round the outer (bottom) corners; keep inner edge sharp */
       border-top-left-radius: 0;
       border-top-right-radius: 0;
-      border-bottom-left-radius: 10px;
-      border-bottom-right-radius: 10px;
-      overflow: hidden;
-      display: flex;
-      align-items: flex-start;
-      /* digit text aligns to split edge */
-      justify-content: center;
-      line-height: 0;
+      border-bottom-left-radius: var(--dynamic-radius);
+      border-bottom-right-radius: var(--dynamic-radius);
+      overflow: hidden; display: flex; align-items: flex-start; justify-content: center; line-height: 0;
     }
 
     /* Digit text inside static halves */
@@ -332,55 +338,34 @@
       user-select: none;
     }
 
-    /* Animated top flap (flips away — shows PREVIOUS digit) */
+    /* Animated top flap */
     .fc-flap-top {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 50%;
+      top: 0; left: 0; width: 100%; height: 50%;
       background: var(--card);
-      border-top-left-radius: 10px;
-      border-top-right-radius: 10px;
+      border-top-left-radius: var(--dynamic-radius);
+      border-top-right-radius: var(--dynamic-radius);
       border-bottom-left-radius: 0;
       border-bottom-right-radius: 0;
-      overflow: hidden;
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      line-height: 0;
-      transform-origin: bottom center;
-      transform-style: preserve-3d;
-      backface-visibility: hidden;
-      z-index: 3;
+      overflow: hidden; display: flex; align-items: flex-end; justify-content: center; line-height: 0;
+      transform-origin: bottom center; transform-style: preserve-3d; backface-visibility: hidden; z-index: 3;
     }
 
     .fc-flap-top.animating {
       animation: flipTop 0.28s ease-in forwards;
     }
 
-    /* Animated bottom flap (flips in — shows CURRENT digit) */
+    /* Animated bottom flap */
     .fc-flap-bottom {
       position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 50%;
+      bottom: 0; left: 0; width: 100%; height: 50%;
       background: var(--card);
       border-top-left-radius: 0;
       border-top-right-radius: 0;
-      border-bottom-left-radius: 10px;
-      border-bottom-right-radius: 10px;
-      overflow: hidden;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      line-height: 0;
-      transform-origin: top center;
-      transform: rotateX(90deg);
-      transform-style: preserve-3d;
-      backface-visibility: hidden;
-      z-index: 3;
+      border-bottom-left-radius: var(--dynamic-radius);
+      border-bottom-right-radius: var(--dynamic-radius);
+      overflow: hidden; display: flex; align-items: flex-start; justify-content: center; line-height: 0;
+      transform-origin: top center; transform: rotateX(90deg); transform-style: preserve-3d; backface-visibility: hidden; z-index: 3;
     }
 
     .fc-flap-bottom.animating {
@@ -1239,40 +1224,45 @@
 }
 
 .dynamic-flip-clock {
-  transform-origin: center center;
+    margin-top: -1.5rem;
+    display: flex;
+    justify-content: center;
+    width: 100%;
 }
 
 /* PC Active Scale */
 @media (min-width: 769px) {
   .dynamic-flip-wrapper .dynamic-flip-clock {
-    transform: scale(1.25); /* Reduced from 2.0. Perfectly fits the horizontal layout without clipping */
+    /* Removed artificial scaling since base cards now fluidly scale with viewport */
+    transform: scale(1); 
   }
 }
 
-/* MOBILE Layout & Scale */
-@media (max-width: 768px) {
-  .flip-group {
-    flex-direction: column !important;
-    gap: 12px !important;
-    align-items: center !important; 
-  }
-  
-  .flip-pair {
-    justify-content: center !important;
-  }
-  
-  .flip-separator {
-    display: none !important; /* Hide colons */
-  }
-  
-  .page > div[style*="position: relative"] > span {
-    right: -45px !important;
-    bottom: 5px !important;
-  }
+/* ================================================================
+   MOBILE & PORTRAIT LAYOUT (Vertical Stack)
+   ================================================================ */
+@media (max-width: 768px), (orientation: portrait) {
+    .flip-group {
+        flex-direction: column !important;
+        gap: clamp(10px, 2vh, 20px) !important;
+        align-items: center !important; 
+    }
+    
+    .flip-pair {
+        justify-content: center !important;
+    }
+    
+    .flip-separator {
+        display: none !important; /* Hide colons when stacked vertically */
+    }
 
-  /* INCREASED scale for 3 stacked rows on phone screens */
-  .dynamic-flip-wrapper .dynamic-flip-clock {
-    transform: scale(1.65) !important; /* Bumped up significantly for a larger look */
-    margin-top: 0 !important; 
-  }
+    .flip-card {
+        /* FIX: Use min() so digits shrink on very short mobile screens and don't overflow */
+        --dynamic-width: min(35vw, 22vh); 
+    }
+
+    .dynamic-flip-wrapper .dynamic-flip-clock {
+        transform: scale(1) !important; /* Reset any legacy fixed scaling */
+        margin-top: 0 !important; 
+    }
 }

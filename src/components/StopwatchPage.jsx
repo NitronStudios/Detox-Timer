@@ -3,10 +3,10 @@ import FlipDisplay from './FlipDisplay';
 import { saveSession } from '../utils/helpers';
 
 export default function StopwatchPage({ onStateChange }) {
+  const [subject, setSubject] = useState('');
   const [elapsed, setElapsed] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [laps, setLaps] = useState([]);
-  const [subject, setSubject] = useState('');
   const intervalRef = useRef(null);
 
   useEffect(() => {
@@ -34,11 +34,38 @@ export default function StopwatchPage({ onStateChange }) {
     }
   }, [isActive, onStateChange]);
 
+  // Background Survival: Restore stopwatch on mount
+  useEffect(() => {
+    const savedStart = localStorage.getItem('detox_stopwatch_start');
+    if (savedStart) {
+      const elapsedSince = Math.floor((Date.now() - parseInt(savedStart)) / 1000);
+      setElapsed(elapsedSince);
+      setIsRunning(true);
+    }
+  }, []);
+
+  // Background Survival: Save theoretical start time when running
+  useEffect(() => {
+    if (isRunning) {
+      localStorage.setItem('detox_stopwatch_start', (Date.now() - elapsed * 1000).toString());
+    } else {
+      localStorage.removeItem('detox_stopwatch_start');
+    }
+  }, [isRunning, elapsed]);
+
   function handleLap() {
     const m = Math.floor(elapsed / 60);
     const s = elapsed % 60;
     const label = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     setLaps(l => [...l, { num: l.length + 1, time: label }]);
+  }
+
+  function handleStart() {
+    setIsRunning(true);
+  }
+
+  function handlePause() {
+    setIsRunning(false);
   }
 
   function handleSave() {
@@ -79,13 +106,13 @@ export default function StopwatchPage({ onStateChange }) {
         <div className="controls" style={{ marginTop: 'auto', marginBottom: '1.5rem' }}>
           {isRunning && (
             <>
-              <button className="ctrl-btn ctrl-btn-outline" onClick={() => setIsRunning(false)}>⏸ PAUSE</button>
+              <button className="ctrl-btn ctrl-btn-outline" onClick={handlePause}>⏸ PAUSE</button>
               <button className="ctrl-btn ctrl-btn-outline" onClick={handleLap}>⧗ LAP</button>
             </>
           )}
           {!isRunning && elapsed > 0 && (
             <>
-              <button className="ctrl-btn ctrl-btn-resume" onClick={() => setIsRunning(true)}>▶ RESUME</button>
+              <button className="ctrl-btn ctrl-btn-resume" onClick={handleStart}>▶ RESUME</button>
               <button className="ctrl-btn ctrl-btn-outline" onClick={handleSave}>⏹ SAVE & STOP</button>
               <button className="icon-btn" style={{ height: 'clamp(45px, 6vh, 55px)', width: 'clamp(45px, 6vh, 55px)' }} onClick={handleDiscard} title="Discard">✕</button>
             </>
@@ -123,7 +150,7 @@ export default function StopwatchPage({ onStateChange }) {
       <FlipDisplay seconds={elapsed} showHours={elapsed >= 3600} />
 
       <div className="controls">
-        <button className="ctrl-btn ctrl-btn-primary" onClick={() => setIsRunning(true)}>▶ START</button>
+        <button className="ctrl-btn ctrl-btn-primary" onClick={handleStart}>▶ START</button>
       </div>
     </div>
   );
