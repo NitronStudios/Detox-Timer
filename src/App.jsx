@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { auth, fbAuth, db, fbDb } from './config/firebase';
+import { Capacitor, SystemBars } from '@capacitor/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import Navbar from './components/Navbar';
 import TimerPage from './components/TimerPage';
 import StopwatchPage from './components/StopwatchPage';
@@ -147,6 +149,55 @@ export default function App() {
       window.onpopstate = null;
     };
   }, [timerActive, stopwatchActive]);
+
+  // ================================================================
+  // NATIVE SYSTEM BARS CONTROL (Android/iOS)
+  // ================================================================
+  useEffect(() => {
+    // Only run this logic on native mobile devices
+    if (!Capacitor.isNativePlatform()) return;
+
+    const setupSystemBars = async () => {
+      try {
+        // Set Portrait Navigation Bar Color to match the app theme
+        await SystemBars.setStyle({ style: 'DARK' });
+        // Set Status Bar Text Style to Light (white text)
+        await StatusBar.setStyle({ style: Style.Dark });
+        // Set Status Bar Background to Dark
+        await StatusBar.setBackgroundColor({ color: '#151515' }); // Match var(--card)
+      } catch (e) {
+        console.log("System bar setup error:", e);
+      }
+    };
+
+    const handleOrientationChange = async () => {
+      try {
+        const isLandscape = window.matchMedia("(orientation: landscape)").matches;
+        if (isLandscape) {
+          // Hide both bars for immersive landscape mode
+          await StatusBar.hide();
+          await SystemBars.hide();
+        } else {
+          // Show bars in portrait mode
+          await StatusBar.show();
+          await SystemBars.show();
+        }
+      } catch (e) {
+        console.log("System bar orientation error:", e);
+      }
+    };
+
+    setupSystemBars();
+    
+    // Check initial orientation
+    handleOrientationChange();
+
+    // Listen for rotation
+    const mediaQuery = window.matchMedia("(orientation: landscape)");
+    mediaQuery.addEventListener('change', handleOrientationChange);
+
+    return () => mediaQuery.removeEventListener('change', handleOrientationChange);
+  }, []);
 
   // Online Presence Heartbeat
   useEffect(() => {
