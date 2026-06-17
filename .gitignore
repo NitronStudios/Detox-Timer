@@ -29,3 +29,11 @@ android/
 *.njsproj
 *.sln
 *.sw?
+
+# Project Memory
+PROJECT_MEMORY.md
+
+# Build outputs
+*.apk
+
+

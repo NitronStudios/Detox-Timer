@@ -1,7 +1,7 @@
 {
   "name": "study-timer",
   "private": true,
-  "version": "1.1.1",
+  "version": "1.1.2",
   "type": "module",
   "homepage": "https://nitronstudios.github.io/Detox-Timer",
   "scripts": {
@@ -13,10 +13,12 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "@capacitor-community/safe-area": "^8.0.1",
     "@capacitor-firebase/authentication": "^8.3.0",
     "@capacitor/android": "^8.4.0",
     "@capacitor/core": "^8.4.0",
     "@capacitor/status-bar": "^8.0.2",
+    "@hugotomazi/capacitor-navigation-bar": "^4.0.1",
     "firebase": "^10.8.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"

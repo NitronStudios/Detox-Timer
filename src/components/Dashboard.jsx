@@ -193,11 +193,20 @@ function Heatmap({ sessions, dailyGoal, isMobile }) {
 // ================================================================
 export default function Dashboard({ settings, onClose, setShowManualLog }) {
   const [sessions, setSessions] = useState([]);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
+  // Smart detection: Triggers mobile layout if screen is narrow OR if height is short (landscape phone)
+  const checkMobile = () => window.innerWidth < 850 || window.innerHeight < 600;
+  const checkLandscape = () => window.innerHeight < 500 && window.innerWidth > window.innerHeight;
+  
+  const [isMobile, setIsMobile] = useState(checkMobile());
+  const [isLandscape, setIsLandscape] = useState(checkLandscape());
 
   useEffect(() => {
     setSessions(getSessions());
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    const handleResize = () => {
+      setIsMobile(checkMobile());
+      setIsLandscape(checkLandscape());
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -229,38 +238,38 @@ export default function Dashboard({ settings, onClose, setShowManualLog }) {
 
   // --- REUSABLE CARDS ---
   const TodaysFocusCard = () => (
-    <div className={`bento-card ${!isMobile ? 'col-span-2' : ''}`} style={{ background: 'var(--accent)', color: '#000', border: 'none', flex: isMobile ? 1 : 'none', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ fontSize: isMobile ? '1rem' : '0.9rem', fontWeight: '800', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: isMobile ? '1rem' : '0.5rem', opacity: 0.8 }}>Today's Focus</div>
-      <div style={{ fontSize: isMobile ? '4.5rem' : '3rem', fontWeight: '800', lineHeight: 1, marginTop: isMobile ? 'auto' : '0' }}>{todayMins} <span style={{ fontSize: isMobile ? '1.5rem' : '1.2rem' }}>mins</span></div>
-      <div style={{ marginTop: 'auto', fontSize: isMobile ? '1.1rem' : '0.9rem', fontWeight: '600' }}>Goal: {settings.dailyGoal} hours</div>
+    <div className={`bento-card ${!isMobile ? 'col-span-2' : ''}`} style={{ background: 'var(--accent)', color: '#000', border: 'none', flex: isMobile ? 1 : 'none', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div style={{ fontSize: isMobile && !isLandscape ? '1rem' : '0.9rem', fontWeight: '800', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: isMobile && !isLandscape ? '1rem' : '0.5rem', opacity: 0.8 }}>Today's Focus</div>
+      <div style={{ fontSize: isMobile && !isLandscape ? '4.5rem' : '3rem', fontWeight: '800', lineHeight: 1, marginTop: 'auto' }}>{todayMins} <span style={{ fontSize: isMobile && !isLandscape ? '1.5rem' : '1.2rem' }}>mins</span></div>
+      <div style={{ marginTop: 'auto', fontSize: isMobile && !isLandscape ? '1.1rem' : '0.9rem', fontWeight: '600' }}>Goal: {settings.dailyGoal} hours</div>
     </div>
   );
 
   const StatsCard = () => (
-    <div className="bento-card" style={{ flex: isMobile ? 1 : 'none', display: 'flex', flexDirection: 'column' }}>
-      <div className="chart-title" style={{ marginBottom: isMobile ? '1.5rem' : '1rem', fontSize: isMobile ? '0.85rem' : '0.75rem' }}>Deep Stats</div>
+    <div className="bento-card" style={{ flex: isMobile ? 1 : 'none', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div className="chart-title" style={{ marginBottom: isMobile && !isLandscape ? '1.5rem' : '1rem', fontSize: isMobile && !isLandscape ? '0.85rem' : '0.75rem' }}>Deep Stats</div>
       <div className="stat-group" style={{ flex: 1, display: 'flex', gap: '1rem' }}>
         <div className="stat-item" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <div style={{ fontSize: isMobile ? '0.9rem' : '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Current Streak</div>
-          <div className="stat-val" style={{ color: 'var(--accent)', fontSize: isMobile ? '2.2rem' : '1.6rem' }}>{currentStreak} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>days</span></div>
+          <div style={{ fontSize: isMobile && !isLandscape ? '0.9rem' : '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Current Streak</div>
+          <div className="stat-val" style={{ color: 'var(--accent)', fontSize: isMobile && !isLandscape ? '2.2rem' : '1.6rem' }}>{currentStreak} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>days</span></div>
         </div>
         <div className="stat-item" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <div style={{ fontSize: isMobile ? '0.9rem' : '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>All Time</div>
-          <div className="stat-val" style={{ fontSize: isMobile ? '2.2rem' : '1.6rem' }}>{totalH}<span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>h</span> {totalM}<span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>m</span></div>
+          <div style={{ fontSize: isMobile && !isLandscape ? '0.9rem' : '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>All Time</div>
+          <div className="stat-val" style={{ fontSize: isMobile && !isLandscape ? '2.2rem' : '1.6rem' }}>{totalH}<span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>h</span> {totalM}<span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>m</span></div>
         </div>
       </div>
     </div>
   );
 
   const BarChartCard = () => (
-    <div className={`bento-card ${!isMobile ? 'col-span-2' : ''}`} style={{ display: 'flex', flexDirection: 'column', flex: isMobile ? 1 : 'none', minHeight: isMobile ? '0' : '260px' }}>
+    <div className={`bento-card ${!isMobile ? 'col-span-2' : ''}`} style={{ display: 'flex', flexDirection: 'column', flex: isMobile ? 1 : 'none', minHeight: 0 }}>
       <div className="chart-title">Activity — Past 7 Days</div>
       <BarChart dailyGoal={settings.dailyGoal} />
     </div>
   );
 
   const RecentCard = () => (
-    <div className="bento-card" style={{ display: 'flex', flexDirection: 'column', flex: isMobile ? 1 : 'none', minHeight: isMobile ? '0' : '260px', overflow: 'hidden' }}>
+    <div className="bento-card" style={{ display: 'flex', flexDirection: 'column', flex: isMobile ? 1 : 'none', minHeight: 0, overflow: 'hidden' }}>
       <div className="chart-title">Recent Sessions</div>
       <div style={{ flex: 1, overflowY: 'auto', paddingRight: '5px' }}>
         {sessions.length === 0 ? (
@@ -289,7 +298,7 @@ export default function Dashboard({ settings, onClose, setShowManualLog }) {
   );
 
   const HeatmapCard = () => (
-    <div className={`bento-card ${!isMobile ? 'col-span-3' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className={`bento-card ${!isMobile ? 'col-span-3' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
       <div className="chart-title">Consistency ({new Date().getFullYear()})</div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', overflow: 'hidden', paddingTop: '10px' }}>
          <Heatmap sessions={sessions} dailyGoal={settings.dailyGoal} isMobile={isMobile} />
@@ -298,7 +307,7 @@ export default function Dashboard({ settings, onClose, setShowManualLog }) {
   );
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--bg)', zIndex: 1500, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--bg)', zIndex: 1500, display: 'flex', flexDirection: 'column', paddingTop: 'var(--safe-top, 0px)' }}>
       
       {/* HEADER */}
       <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg2)' }}>
@@ -312,17 +321,18 @@ export default function Dashboard({ settings, onClose, setShowManualLog }) {
         {isMobile ? (
           <>
             {/* MOBILE PAGE 1: Today & Stats */}
-            <div style={{ height: 'calc(100vh - 65px)', scrollSnapAlign: 'start', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <TodaysFocusCard />
-              <StatsCard />
+            <div style={{ height: 'calc(100vh - 65px - var(--safe-top, 0px))', scrollSnapAlign: 'start', padding: '1rem', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', flexDirection: isLandscape ? 'row' : 'column', gap: '1rem', flex: 1, minHeight: 0 }}>
+                <TodaysFocusCard />
+                <StatsCard />
+              </div>
               
-              {/* NEW: Themed Quick Action Button */}
               <button 
                 onClick={() => { onClose(); setShowManualLog(true); }}
                 style={{ 
-                  marginTop: '0.5rem',
+                  marginTop: '0.75rem',
                   width: '100%', 
-                  padding: '1.25rem', 
+                  padding: isLandscape ? '0.75rem' : '1.25rem', 
                   background: 'var(--card)', 
                   border: '1px solid var(--border)', 
                   borderRadius: '12px', 
@@ -345,25 +355,27 @@ export default function Dashboard({ settings, onClose, setShowManualLog }) {
                 Add Manual Log
               </button>
 
-              <div style={{ marginTop: 'auto', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem', letterSpacing: '0.1em' }}>↓ Swipe for Charts ↓</div>
+              <div style={{ marginTop: '0.75rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem', letterSpacing: '0.1em' }}>↓ Swipe for Charts ↓</div>
             </div>
 
             {/* MOBILE PAGE 2: Bar Graph & Recent */}
-            <div style={{ height: 'calc(100vh - 65px)', scrollSnapAlign: 'start', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <BarChartCard />
-              <RecentCard />
-              <div style={{ marginTop: 'auto', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem', letterSpacing: '0.1em' }}>↓ Swipe for Heatmap ↓</div>
+            <div style={{ height: 'calc(100vh - 65px - var(--safe-top, 0px))', scrollSnapAlign: 'start', padding: '1rem', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', flexDirection: isLandscape ? 'row' : 'column', gap: '1rem', flex: 1, minHeight: 0 }}>
+                <BarChartCard />
+                <RecentCard />
+              </div>
+              <div style={{ marginTop: '0.75rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem', letterSpacing: '0.1em' }}>↓ Swipe for Heatmap ↓</div>
             </div>
 
             {/* MOBILE PAGE 3: Consistency (Vertical) */}
-            <div style={{ height: 'calc(100vh - 65px)', scrollSnapAlign: 'start', padding: '1rem', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ height: 'calc(100vh - 65px - var(--safe-top, 0px))', scrollSnapAlign: 'start', padding: '1rem', display: 'flex', flexDirection: 'column' }}>
               <HeatmapCard />
             </div>
           </>
         ) : (
           <>
             {/* DESKTOP PAGE 1: Original Bento Grid */}
-            <div style={{ height: 'calc(100vh - 56px)', scrollSnapAlign: 'start', padding: '1.25rem', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ height: 'calc(100vh - 56px - var(--safe-top, 0px))', scrollSnapAlign: 'start', padding: '1.25rem', display: 'flex', flexDirection: 'column' }}>
               <div className="bento-grid">
                 <TodaysFocusCard />
                 <StatsCard />
@@ -376,7 +388,7 @@ export default function Dashboard({ settings, onClose, setShowManualLog }) {
             </div>
 
             {/* DESKTOP PAGE 2: Horizontal Heatmap */}
-            <div style={{ height: 'calc(100vh - 56px)', scrollSnapAlign: 'start', padding: '1.25rem', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ height: 'calc(100vh - 56px - var(--safe-top, 0px))', scrollSnapAlign: 'start', padding: '1.25rem', display: 'flex', flexDirection: 'column' }}>
               <HeatmapCard />
             </div>
           </>

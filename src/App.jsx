@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { auth, fbAuth, db, fbDb } from './config/firebase';
 import { Capacitor, SystemBars } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
+import { NavigationBar } from '@hugotomazi/capacitor-navigation-bar';
 import Navbar from './components/Navbar';
 import TimerPage from './components/TimerPage';
 import StopwatchPage from './components/StopwatchPage';
@@ -154,17 +155,18 @@ export default function App() {
   // NATIVE SYSTEM BARS CONTROL (Android/iOS)
   // ================================================================
   useEffect(() => {
-    // Only run this logic on native mobile devices
     if (!Capacitor.isNativePlatform()) return;
 
     const setupSystemBars = async () => {
       try {
-        // Set Portrait Navigation Bar Color to match the app theme
-        await SystemBars.setStyle({ style: 'DARK' });
-        // Set Status Bar Text Style to Light (white text)
         await StatusBar.setStyle({ style: Style.Dark });
-        // Set Status Bar Background to Dark
-        await StatusBar.setBackgroundColor({ color: '#151515' }); // Match var(--card)
+        // Match the true black background
+        await StatusBar.setBackgroundColor({ color: '#000000' });
+        // Let the webview extend seamlessly behind the status bar (CSS safe-area will handle padding)
+        await StatusBar.setOverlaysWebView({ overlay: true });
+        
+        // Force true black on the bottom Android Navigation Bar natively
+        await NavigationBar.setColor({ color: '#000000', darkButtons: false });
       } catch (e) {
         console.log("System bar setup error:", e);
       }
@@ -174,11 +176,10 @@ export default function App() {
       try {
         const isLandscape = window.matchMedia("(orientation: landscape)").matches;
         if (isLandscape) {
-          // Hide both bars for immersive landscape mode
           await StatusBar.hide();
+          // Hide navigation bar
           await SystemBars.hide();
         } else {
-          // Show bars in portrait mode
           await StatusBar.show();
           await SystemBars.show();
         }
@@ -188,15 +189,43 @@ export default function App() {
     };
 
     setupSystemBars();
-    
-    // Check initial orientation
     handleOrientationChange();
 
-    // Listen for rotation
     const mediaQuery = window.matchMedia("(orientation: landscape)");
     mediaQuery.addEventListener('change', handleOrientationChange);
 
     return () => mediaQuery.removeEventListener('change', handleOrientationChange);
+  }, []);
+
+  // ================================================================
+  // NATIVE SAFE AREA CONTROL (Fix for Notch/Status Bar Overlap)
+  // ================================================================
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) {
+      // Provide a fallback for web if needed, though web usually handles env() correctly
+      document.documentElement.style.setProperty('--safe-top', 'env(safe-area-inset-top, 0px)');
+      return;
+    }
+
+    const setSafeArea = async () => {
+      try {
+        // Dynamically import SafeArea so it doesn't break web builds if not installed
+        const { SafeArea } = await import('@capacitor-community/safe-area');
+        const insets = await SafeArea.getSafeAreaInsets();
+        
+        // If the native API successfully returns a value > 0, apply it.
+        // Otherwise, fallback to a hardcoded minimum padding (e.g., 28px) for typical Android status bars.
+        const topInset = insets.insets.top > 0 ? `${insets.insets.top}px` : '32px';
+        
+        document.documentElement.style.setProperty('--safe-top', topInset);
+      } catch (e) {
+        console.log("Safe Area plugin not found or failed, applying fallback.", e);
+        // Fallback for Android status bar if the plugin fails
+        document.documentElement.style.setProperty('--safe-top', '32px');
+      }
+    };
+
+    setSafeArea();
   }, []);
 
   // Online Presence Heartbeat

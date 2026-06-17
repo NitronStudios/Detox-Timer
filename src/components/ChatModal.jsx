@@ -143,7 +143,7 @@ export default function ChatModal({ onClose }) {
   };
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2500 }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2500, paddingTop: 'var(--safe-top, 0px)' }}>
       <div style={{ width: '100vw', height: '100vh', display: 'flex', overflow: 'hidden' }}>
 
         {/* LEFT PANEL: NAVIGATION & FRIENDS */}

@@ -89,6 +89,8 @@
       flex-direction: column;
       height: 100vh;
       overflow: hidden;
+      /* Enforce safe area globally */
+      padding-top: var(--safe-top, 0px);
     }
 
     .app-main {
@@ -156,8 +158,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      height: 56px;
-      padding: 0 1.75rem;
+      height: 56px; /* Reset to fixed height since padding is now on the parent */
+      padding: 0 1.75rem; /* Reset padding to horizontal only */
       border-bottom: 1px solid var(--divider);
       background: var(--bg);
       flex-shrink: 0;
@@ -690,6 +692,7 @@
       flex-direction: column;
       z-index: 100;
       overflow: hidden;
+      padding-top: var(--safe-top, 0px);
     }
 
     .dash-navbar {
@@ -1111,6 +1114,8 @@
   display: flex;
   flex-direction: column;
   box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+  /* FIX: Push side menu content safely below the device notch */
+  padding-top: var(--safe-top, 0px);
 }
 
 .side-menu.open {
@@ -1265,4 +1270,13 @@
         transform: scale(1) !important; /* Reset any legacy fixed scaling */
         margin-top: 0 !important; 
     }
+}
+
+/* ================================================================
+   NATIVE LANDSCAPE SAFE AREA FIX
+   ================================================================ */
+@media (orientation: landscape) {
+  :root {
+    --safe-top: 0px !important;
+  }
 }

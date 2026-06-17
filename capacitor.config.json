@@ -7,6 +7,17 @@
     "FirebaseAuthentication": {
       "skipNativeAuth": false,
       "providers": ["google.com"]
+    },
+    "SplashScreen": {
+      "launchShowDuration": 0
+    },
+    "StatusBar": {
+      "backgroundColor": "#000000",
+      "style": "DARK"
+    },
+    "NavigationBar": {
+      "backgroundColor": "#000000",
+      "style": "DARK"
     }
   }
 }
