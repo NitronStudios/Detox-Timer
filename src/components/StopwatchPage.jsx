@@ -134,24 +134,51 @@ export default function StopwatchPage({ onStateChange }) {
   }
 
   return (
-    <div className="page" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+    <div className="page" style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      height: '100%', 
+      overflowY: 'auto', 
+      overflowX: 'hidden',
+      width: '100%'
+    }}>
+      
+      {/* TOP SPACER: Pushes content to center, shrinks gracefully when keyboard opens */}
+      <div style={{ flex: 1, minHeight: '10px' }}></div>
+      
+      {/* CONTENT WRAPPER */}
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        padding: '20px 0',
+        width: '100%', 
+        gap: '25px',
+        flexShrink: 0
+      }}>
+        
+        <div className="subject-wrap" style={{ margin: 0, width: '85%', maxWidth: '350px' }}>
+          <input
+            className="subject-input"
+            type="text"
+            placeholder="What are you working on?"
+            value={subject}
+            onChange={e => setSubject(e.target.value)}
+            maxLength={50}
+            style={{ width: '100%' }}
+          />
+        </div>
 
-      <div className="subject-wrap" style={{ margin: 0, marginBottom: '2rem' }}>
-        <input
-          className="subject-input"
-          type="text"
-          placeholder="What are you working on?"
-          value={subject}
-          onChange={e => setSubject(e.target.value)}
-          maxLength={50}
-        />
+        <FlipDisplay seconds={elapsed} showHours={elapsed >= 3600} />
+
+        <div className="controls">
+          <button className="ctrl-btn ctrl-btn-primary" onClick={handleStart}>▶ START</button>
+        </div>
       </div>
 
-      <FlipDisplay seconds={elapsed} showHours={elapsed >= 3600} />
-
-      <div className="controls">
-        <button className="ctrl-btn ctrl-btn-primary" onClick={handleStart}>▶ START</button>
-      </div>
+      {/* BOTTOM SPACER */}
+      <div style={{ flex: 1, minHeight: '10px' }}></div>
+      
     </div>
   );
 }

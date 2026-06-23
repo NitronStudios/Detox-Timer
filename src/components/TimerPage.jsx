@@ -123,18 +123,18 @@ export default function TimerPage({ settings, onStateChange }) {
     }
   }
 
-  function handleStart() { 
-    setIsRunning(true); 
-    setIsPaused(false); 
+  function handleStart() {
+    setIsRunning(true);
+    setIsPaused(false);
   }
-  function handlePause() { 
-    clearInterval(intervalRef.current); 
-    setIsRunning(false); 
-    setIsPaused(true); 
+  function handlePause() {
+    clearInterval(intervalRef.current);
+    setIsRunning(false);
+    setIsPaused(true);
   }
-  function handleResume() { 
-    setIsRunning(true); 
-    setIsPaused(false); 
+  function handleResume() {
+    setIsRunning(true);
+    setIsPaused(false);
   }
 
   function handleSave() {
@@ -195,26 +195,47 @@ export default function TimerPage({ settings, onStateChange }) {
   }
 
   return (
-    <div className="page" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-      {!active && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', transition: 'all 0.3s', marginBottom: '1.5rem' }}>
+    <div className="page" style={{
+      position: 'relative',
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      width: '100%'
+    }}>
+
+      {/* TOP SPACER: Pushes content to center, gracefully shrinks to 0 when keyboard opens */}
+      <div style={{ flex: 1, minHeight: '10px' }}></div>
+
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '20px 0',
+        width: '100%',
+        gap: '25px',
+        flexShrink: 0 /* Prevents the actual content from squishing */
+      }}>
+
+        {!active && (
           <PomodoroConfig studyMin={studyMin} breakMin={breakMin} onStudy={setStudyMin} onBreak={setBreakMin} disabled={active} />
-        </div>
-      )}
+        )}
 
-      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 10 }}>
-        <div className="subject-wrap" style={{ margin: 0 }}>
-          <input className="subject-input" type="text" placeholder="What are you studying?" value={subject} onChange={e => setSubject(e.target.value)} maxLength={50} />
+        <div className="subject-wrap" style={{ margin: 0, width: '85%', maxWidth: '350px' }}>
+          <input className="subject-input" type="text" placeholder="What are you studying?" value={subject} onChange={e => setSubject(e.target.value)} maxLength={50} style={{ width: '100%' }} />
         </div>
-      </div>
 
-      <div style={{ marginTop: '20px', zIndex: 5 }}>
         <FlipDisplay seconds={timeLeft} />
+
+        <div className="controls">
+          <button className="ctrl-btn ctrl-btn-primary" onClick={handleStart}>▶ START</button>
+        </div>
       </div>
 
-      <div className="controls" style={{ marginTop: '30px', zIndex: 10 }}>
-        <button className="ctrl-btn ctrl-btn-primary" onClick={handleStart}>▶ START</button>
-      </div>
+      {/* BOTTOM SPACER: Pushes content up to center, gracefully shrinks to 0 when keyboard opens */}
+      <div style={{ flex: 1, minHeight: '10px' }}></div>
+
     </div>
   );
 }

@@ -174,12 +174,20 @@ export default function App() {
 
     const handleOrientationChange = async () => {
       try {
-        const isLandscape = window.matchMedia("(orientation: landscape)").matches;
+        // FIX: Use physical screen orientation, bypassing keyboard aspect-ratio changes
+        let isLandscape = false;
+        if (window.screen && window.screen.orientation) {
+          isLandscape = window.screen.orientation.type.startsWith('landscape');
+        } else {
+          isLandscape = window.innerWidth > window.innerHeight;
+        }
+
         if (isLandscape) {
+          document.documentElement.classList.add('is-landscape');
           await StatusBar.hide();
-          // Hide navigation bar
           await SystemBars.hide();
         } else {
+          document.documentElement.classList.remove('is-landscape');
           await StatusBar.show();
           await SystemBars.show();
         }
@@ -191,10 +199,20 @@ export default function App() {
     setupSystemBars();
     handleOrientationChange();
 
-    const mediaQuery = window.matchMedia("(orientation: landscape)");
-    mediaQuery.addEventListener('change', handleOrientationChange);
+    // Listen to physical rotation API instead of CSS media query
+    if (window.screen && window.screen.orientation) {
+      window.screen.orientation.addEventListener('change', handleOrientationChange);
+    } else {
+      window.addEventListener('resize', handleOrientationChange);
+    }
 
-    return () => mediaQuery.removeEventListener('change', handleOrientationChange);
+    return () => {
+      if (window.screen && window.screen.orientation) {
+        window.screen.orientation.removeEventListener('change', handleOrientationChange);
+      } else {
+        window.removeEventListener('resize', handleOrientationChange);
+      }
+    };
   }, []);
 
   // ================================================================
@@ -226,6 +244,41 @@ export default function App() {
     };
 
     setSafeArea();
+  }, []);
+
+  // ================================================================
+  // KEYBOARD VISUAL STATE (toggles CSS class for UI shrinking)
+  // NOTE: Actual viewport resize is handled by adjustResize + resize:native
+  // ================================================================
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let cleanupFns = [];
+    
+    const setupKeyboardListeners = async () => {
+      try {
+        const { Keyboard } = await import('@capacitor/keyboard');
+        
+        const showListener = await Keyboard.addListener('keyboardWillShow', () => {
+          document.documentElement.classList.add('keyboard-open');
+        });
+        
+        const hideListener = await Keyboard.addListener('keyboardWillHide', () => {
+          document.documentElement.classList.remove('keyboard-open');
+        });
+        
+        cleanupFns.push(() => showListener.remove());
+        cleanupFns.push(() => hideListener.remove());
+      } catch (e) {
+        console.log("Keyboard plugin not available:", e);
+      }
+    };
+    
+    setupKeyboardListeners();
+    
+    return () => {
+      cleanupFns.forEach(fn => fn());
+    };
   }, []);
 
   // Online Presence Heartbeat

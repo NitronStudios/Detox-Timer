@@ -18,6 +18,13 @@
     "NavigationBar": {
       "backgroundColor": "#000000",
       "style": "DARK"
+    },
+    "Keyboard": {
+      "resize": "native",
+      "style": "dark"
+    },
+    "SystemBars": {
+      "insetsHandling": "disable"
     }
   }
 }

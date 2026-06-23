@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { syncToCloud } from '../utils/helpers';
+
 
 export default function ManualLogModal({ onClose }) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -66,18 +68,36 @@ export default function ManualLogModal({ onClose }) {
       newSessions.push({ id: Date.now(), date: date, subject: subject.trim(), durationMinutes: endMins - startMins });
     }
 
-    const merged = [...existingSessions, ...newSessions];
+    // FRESH READ: Get latest storage right before saving to avoid overwriting
+    const freshSessions = JSON.parse(localStorage.getItem('focus_sessions') || '[]');
+    const merged = [...freshSessions, ...newSessions];
     localStorage.setItem('focus_sessions', JSON.stringify(merged));
     
-    if (typeof window.syncToCloud === 'function') window.syncToCloud();
+    // EXPLICIT SYNC: Call the imported function directly
+    try {
+      syncToCloud();
+    } catch (error) {
+      console.error("Cloud sync failed, but saved locally:", error);
+    }
     
     alert(`Successfully logged ${newSessions.length} session(s)!`);
-    window.location.reload(); 
+    
+    // CLOSE MODAL: Do NOT reload the window
+    onClose(); 
   };
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '10px', paddingTop: 'calc(10px + var(--safe-top, 0px))' }}>
-      <div className="modal-content" style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '20px', padding: '2rem', width: '95%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div style={{
+      position: 'absolute', /* FIX: Conforms natively to the shrunken .app wrapper */
+      top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.85)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 2000,
+      padding: '10px'
+    }}>
+      <div className="modal-content" style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '20px', padding: '2rem', width: '95%', maxWidth: '400px', maxHeight: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>✏️ Manual Log</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text)', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>

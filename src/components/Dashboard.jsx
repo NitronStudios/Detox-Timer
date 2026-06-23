@@ -321,7 +321,7 @@ export default function Dashboard({ settings, onClose, setShowManualLog }) {
         {isMobile ? (
           <>
             {/* MOBILE PAGE 1: Today & Stats */}
-            <div style={{ height: 'calc(100vh - 65px - var(--safe-top, 0px))', scrollSnapAlign: 'start', padding: '1rem', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ height: 'calc(100dvh - 65px - var(--safe-top, 0px))', scrollSnapAlign: 'start', padding: '1rem', display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', flexDirection: isLandscape ? 'row' : 'column', gap: '1rem', flex: 1, minHeight: 0 }}>
                 <TodaysFocusCard />
                 <StatsCard />
@@ -359,7 +359,7 @@ export default function Dashboard({ settings, onClose, setShowManualLog }) {
             </div>
 
             {/* MOBILE PAGE 2: Bar Graph & Recent */}
-            <div style={{ height: 'calc(100vh - 65px - var(--safe-top, 0px))', scrollSnapAlign: 'start', padding: '1rem', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ height: 'calc(100dvh - 65px - var(--safe-top, 0px))', scrollSnapAlign: 'start', padding: '1rem', display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', flexDirection: isLandscape ? 'row' : 'column', gap: '1rem', flex: 1, minHeight: 0 }}>
                 <BarChartCard />
                 <RecentCard />
@@ -368,14 +368,14 @@ export default function Dashboard({ settings, onClose, setShowManualLog }) {
             </div>
 
             {/* MOBILE PAGE 3: Consistency (Vertical) */}
-            <div style={{ height: 'calc(100vh - 65px - var(--safe-top, 0px))', scrollSnapAlign: 'start', padding: '1rem', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ height: 'calc(100dvh - 65px - var(--safe-top, 0px))', scrollSnapAlign: 'start', padding: '1rem', display: 'flex', flexDirection: 'column' }}>
               <HeatmapCard />
             </div>
           </>
         ) : (
           <>
             {/* DESKTOP PAGE 1: Original Bento Grid */}
-            <div style={{ height: 'calc(100vh - 56px - var(--safe-top, 0px))', scrollSnapAlign: 'start', padding: '1.25rem', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ height: 'calc(100dvh - 56px - var(--safe-top, 0px))', scrollSnapAlign: 'start', padding: '1.25rem', display: 'flex', flexDirection: 'column' }}>
               <div className="bento-grid">
                 <TodaysFocusCard />
                 <StatsCard />
@@ -388,7 +388,7 @@ export default function Dashboard({ settings, onClose, setShowManualLog }) {
             </div>
 
             {/* DESKTOP PAGE 2: Horizontal Heatmap */}
-            <div style={{ height: 'calc(100vh - 56px - var(--safe-top, 0px))', scrollSnapAlign: 'start', padding: '1.25rem', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ height: 'calc(100dvh - 56px - var(--safe-top, 0px))', scrollSnapAlign: 'start', padding: '1.25rem', display: 'flex', flexDirection: 'column' }}>
               <HeatmapCard />
             </div>
           </>

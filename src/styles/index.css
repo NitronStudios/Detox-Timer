@@ -63,35 +63,34 @@
       box-sizing: border-box;
     }
 
-    html,
-    body {
-      height: 100%;
-    }
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
 
-    body {
-      font-family: 'Inter', -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      height: 100vh;
-      overflow: hidden;
-      transition: background 0.3s ease, color 0.3s ease;
-    }
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100%;
+  overflow: hidden;
+  transition: background 0.3s ease, color 0.3s ease;
+}
 
-    /* ================================================================
-       APP SHELL & ANIMATIONS
-       ================================================================ */
-    #root {
-      height: 100%;
-    }
+#root {
+  height: 100%;
+}
 
-    .app {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      overflow: hidden;
-      /* Enforce safe area globally */
-      padding-top: var(--safe-top, 0px);
-    }
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  padding-top: var(--safe-top, 0px);
+}
+
+
 
     .app-main {
       position: relative;
@@ -1106,7 +1105,7 @@
   position: fixed;
   top: 0; left: -280px;
   width: 260px;
-  height: 100vh;
+  height: 100dvh;
   background: var(--bg2);
   border-right: 1px solid var(--border);
   z-index: 3000;
@@ -1275,8 +1274,35 @@
 /* ================================================================
    NATIVE LANDSCAPE SAFE AREA FIX
    ================================================================ */
-@media (orientation: landscape) {
-  :root {
-    --safe-top: 0px !important;
-  }
+/* Replaced @media (orientation: landscape) because the soft keyboard falsely triggers it */
+html.is-landscape {
+  --safe-top: 0px !important;
 }
+
+/* ================================================================
+   UNIVERSAL KEYBOARD AUTO-CENTERING FIX
+   ================================================================ */
+/* 1. Shrink the ACTUAL DOM boundaries of the clock to free up flex space */
+html.keyboard-open .flip-group {
+    transform: none !important;
+    margin: 0 !important;
+    gap: clamp(5px, 1vh, 10px) !important;
+    transition: all 0.3s ease;
+}
+
+html.keyboard-open .flip-card {
+    /* Dramatically reduces the physical layout size of the cards */
+    --dynamic-width: min(20vw, 10vh) !important; 
+}
+
+/* 2. Hide controls & config while typing to keep UI clean and spacious */
+html.keyboard-open .controls,
+html.keyboard-open .pomo-config {
+    display: none !important;
+}
+
+
+
+
+
+
