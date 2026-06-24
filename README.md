@@ -25,7 +25,7 @@ Simply click here to open the web version on any browser:
 
 📱 **Download for Android:**
 Want the real app experience? Download the Android APK directly to your phone:
-👉 *[Android APP](Detox_Timer_.v1.1.2.apk)*
+👉 *[Android APP](https://github.com/NitronStudios/Detox-Timer/releases/download/v1.1.3/Detox_Timer_.v1.1.3.apk)*
 
 ---
 
