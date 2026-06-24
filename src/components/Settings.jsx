@@ -88,12 +88,20 @@ export default function Settings({ settings, setSettings, onClose, theme, cycleT
     }
   }
 
-  function handleLogout() {
-    fbAuth.signOut(auth)
-      .then(() => {
-        onClose();
-      })
-      .catch(err => console.error("Logout Error", err));
+  async function handleLogout() {
+    try {
+      // 1. NUKE local storage FIRST to prevent any state-saving listeners from catching old data
+      localStorage.clear();
+
+      // 2. NOW sign out from Firebase Auth
+      await fbAuth.signOut(auth);
+
+      // 3. Hard replace the URL to kill the React instance instantly
+      // This prevents any background useEffects from re-saving state.
+      window.location.replace('/');
+    } catch (error) {
+      console.error('Logout Error:', error);
+    }
   }
 
   function updateSetting(key, val) {

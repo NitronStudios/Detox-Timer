@@ -13,6 +13,7 @@ import ManualLogModal from './components/ManualLogModal';
 import LoginScreen from './components/LoginScreen';
 import LeaderboardModal from './components/LeaderboardModal';
 import ChatModal from './components/ChatModal';
+import OnboardingScreen from './components/OnboardingScreen';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -304,6 +305,18 @@ export default function App() {
 
   if (!user) {
     return <LoginScreen />;
+  }
+
+  // GATEKEEPER: If user is logged in, but has no username set, force them to onboarding.
+  // We check this AFTER authChecking is false, meaning we've already tried fetching their existing cloud data.
+  if (user && !settings.username) {
+    return (
+      <OnboardingScreen 
+        settings={settings} 
+        setSettings={setSettings} 
+        onComplete={() => console.log('Onboarding complete')} 
+      />
+    );
   }
 
   return (
