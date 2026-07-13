@@ -1,11 +1,32 @@
 import { useState, useEffect } from 'react';
 import { getSessions, syncToCloud } from '../utils/helpers';
 import { auth, fbAuth, db, fbDb } from '../config/firebase';
+import { Clock, AlertTriangle, Download, Upload, Trash2, LogOut, CheckCircle, XCircle } from 'lucide-react';
 
-export default function Settings({ settings, setSettings, onClose, theme, cycleTheme }) {
+export default function Settings({ 
+  settings, 
+  setSettings, 
+  theme, 
+  setTheme,
+  cycleTheme, 
+  onClose, 
+  setShowDash, 
+  setShowLeaderboard, 
+  setShowChat 
+}) {
   const [usernameInput, setUsernameInput] = useState(settings.username || '');
   const [usernameStatus, setUsernameStatus] = useState('');
   const [daysLeft, setDaysLeft] = useState(0);
+  const [activeCategory, setActiveCategory] = useState('profile');
+  const [selectedMobileCategory, setSelectedMobileCategory] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 580);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 580);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Calculate 14-day cooldown
   useEffect(() => {
@@ -80,24 +101,21 @@ export default function Settings({ settings, setSettings, onClose, theme, cycleT
   }
 
   function handleClearData() {
-    if (window.confirm("Are you sure you want to clear all your study data? This cannot be undone.")) {
-      localStorage.removeItem('focus_sessions');
-      syncToCloud();
-      alert("All data cleared successfully.");
-      onClose();
-    }
+    setShowClearConfirm(true);
+  }
+
+  function confirmClearData() {
+    localStorage.removeItem('focus_sessions');
+    syncToCloud();
+    alert("All data cleared successfully.");
+    setShowClearConfirm(false);
+    onClose();
   }
 
   async function handleLogout() {
     try {
-      // 1. NUKE local storage FIRST to prevent any state-saving listeners from catching old data
       localStorage.clear();
-
-      // 2. NOW sign out from Firebase Auth
       await fbAuth.signOut(auth);
-
-      // 3. Hard replace the URL to kill the React instance instantly
-      // This prevents any background useEffects from re-saving state.
       window.location.replace('/');
     } catch (error) {
       console.error('Logout Error:', error);
@@ -149,12 +167,11 @@ export default function Settings({ settings, setSettings, onClose, theme, cycleT
       if (importedSessions.length > 0) {
         const existing = JSON.parse(localStorage.getItem('focus_sessions') || '[]');
         const merged = [...existing, ...importedSessions];
-        // Deduplicate by ID to prevent double entries
         const unique = merged.filter((v, i, a) => a.findIndex(v2 => (v2.id === v.id)) === i);
         localStorage.setItem('focus_sessions', JSON.stringify(unique));
         syncToCloud();
         alert(`${importedSessions.length} sessions imported & synced to cloud successfully!`);
-        onClose(); // Close settings to see dashboard update
+        onClose();
       }
     };
     reader.readAsText(file);
@@ -168,105 +185,800 @@ export default function Settings({ settings, setSettings, onClose, theme, cycleT
   ];
 
   return (
-    <div className="dash-overlay">
-      <div className="dash-navbar">
-        <button className="icon-btn" onClick={onClose} title="Back">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
+    <div className="dash-overlay mobile-modal-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0, 0, 0, 0.65)', backdropFilter: 'blur(12px)', zIndex: 2000, padding: '2rem' }}>
+      {showClearConfirm && (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 2500, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' }}>
+          <h3 style={{ color: 'var(--text)', marginBottom: '15px' }}>Clear All Data?</h3>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '25px', maxWidth: '300px' }}>Are you sure you want to clear all your study data? This cannot be undone.</p>
+          <div style={{ display: 'flex', gap: '15px' }}>
+            <button className="ctrl-btn ctrl-btn-outline" onClick={() => setShowClearConfirm(false)}>CANCEL</button>
+            <button className="ctrl-btn ctrl-btn-resume" onClick={confirmClearData} style={{ background: '#EF4444', borderColor: '#EF4444' }}>CLEAR DATA</button>
+          </div>
+        </div>
+      )}
+      {/* Self-contained styling specifically for the Settings design variation */}
+      <style>{`
+        .system-container {
+          display: grid;
+          grid-template-columns: 320px 1fr;
+          height: calc(100vh - 4rem);
+          width: calc(100vw - 4rem);
+          max-width: 1100px;
+          max-height: 750px;
+          background-color: var(--bg);
+          color: var(--text);
+          position: relative;
+          border: 1px solid var(--border);
+          border-radius: 20px;
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+          overflow: hidden;
+        }
+
+        .setting-group-card {
+          background: var(--card2);
+          border: 1px solid var(--border);
+          border-radius: 16px;
+          padding: 1.5rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+          width: 100%;
+          max-width: 500px;
+        }
+
+        .setting-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1.25rem;
+        }
+
+        @media (max-width: 580px) {
+          .setting-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        /* Column 1: Navigation */
+        .nav-pane {
+          border-right: 1px solid var(--border);
+          display: flex;
+          flex-direction: column;
+          padding: 2rem 1.5rem;
+          background: var(--bg);
+        }
+
+        .brand {
+          font-family: 'Syne', sans-serif;
+          font-size: 1.25rem;
+          font-weight: 800;
+          margin-bottom: 3rem;
+          letter-spacing: -0.04em;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: var(--text);
+        }
+
+        .nav-group {
+          list-style: none;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .nav-item {
+          font-family: 'JetBrains Mono', monospace, 'Space Mono';
+          font-size: 0.65rem;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          padding: 0.75rem;
+          border: 1px solid transparent;
+          color: var(--text-muted);
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          transition: all 0.2s;
+        }
+
+        .nav-item.active {
+          color: var(--text);
+          border-color: var(--border);
+          background: var(--card2);
+        }
+
+        .nav-item:hover:not(.active) {
+          color: var(--text);
+          background: var(--card2);
+        }
+
+        /* Column 2: Main Settings List */
+        .master-pane {
+          background: var(--card2);
+          border-right: 1px solid var(--border);
+          padding: 0;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .pane-header {
+          padding: 2.5rem 2rem;
+          border-bottom: 1px solid var(--border);
+        }
+
+        .pane-label {
+          font-family: 'JetBrains Mono', monospace, 'Space Mono';
+          font-size: 0.6rem;
+          text-transform: uppercase;
+          letter-spacing: 0.2em;
+          color: var(--accent);
+          margin-bottom: 1rem;
+          display: block;
+        }
+
+        .settings-title {
+          font-family: 'Syne', sans-serif;
+          font-size: 2.2rem;
+          font-weight: 800;
+          letter-spacing: -0.05em;
+          line-height: 1;
+          margin: 0;
+          color: var(--text);
+        }
+
+        .setting-categories {
+          flex: 1;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+          padding: 1.5rem 1.25rem;
+        }
+
+        .category-item {
+          padding: 1.25rem 1.5rem;
+          border: 1px solid transparent;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          text-align: left;
+          background: none;
+          width: 100%;
+        }
+
+        .category-item:hover:not(.active) { 
+          background: var(--card2); 
+          border-color: var(--card2);
+        }
+
+        .category-item.active { 
+          background: var(--accent); 
+          border-color: var(--accent);
+        }
+
+        .category-item.active .category-title { 
+          color: #000 !important; 
+        }
+
+        .category-item.active .category-meta { 
+          color: rgba(0, 0, 0, 0.6) !important; 
+        }
+
+        .category-title {
+          font-weight: 600;
+          font-size: 0.95rem;
+          margin-bottom: 0.25rem;
+          display: block;
+          color: var(--text);
+        }
+
+        .category-meta {
+          font-family: 'JetBrains Mono', monospace, 'Space Mono';
+          font-size: 0.65rem;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: var(--text-muted);
+        }
+
+        /* Column 3: Detailed View */
+        .detail-pane {
+          padding: 4rem 3rem;
+          display: flex;
+          flex-direction: column;
+          gap: 3rem;
+          overflow-y: auto;
+          position: relative;
+        }
+
+        .field-group {
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
+          max-width: 500px;
+        }
+
+        .field {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+
+        .field-label {
+          font-family: 'JetBrains Mono', monospace, 'Space Mono';
+          font-size: 0.7rem;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          color: var(--text-muted);
+        }
+
+        .field-input, .field-select {
+          background: transparent;
+          border: 1px solid var(--border);
+          border-radius: 10px;
+          color: var(--text);
+          padding: 1rem;
+          font-family: 'JetBrains Mono', monospace, 'Space Mono';
+          font-size: 0.85rem;
+          width: 100%;
+          outline: none;
+          transition: border-color 0.2s;
+        }
+
+        .field-input:focus, .field-select:focus {
+          border-color: var(--accent);
+        }
+
+        .toggle-control {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 1rem;
+          border: 1px solid var(--border);
+          border-radius: 10px;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+
+        .toggle-control:hover {
+          background: var(--card2);
+        }
+
+        .toggle-switch {
+          width: 36px;
+          height: 18px;
+          background: var(--border);
+          border-radius: 9px;
+          position: relative;
+          transition: background 0.2s;
+        }
+
+        .toggle-switch.active { 
+          background: var(--accent); 
+        }
+
+        .toggle-switch::after {
+          content: '';
+          position: absolute;
+          width: 14px; height: 14px;
+          background: var(--text);
+          top: 2px; left: 2px;
+          border-radius: 50%;
+          transition: left 0.2s;
+        }
+
+        .toggle-switch.active::after { 
+          left: 20px; 
+          background: #000; 
+        }
+
+        .color-swatches { 
+          display: flex; 
+          gap: 8px; 
+        }
+
+        .swatch { 
+          width: 24px; 
+          height: 24px; 
+          border: 1px solid var(--border); 
+          border-radius: 50%;
+          cursor: pointer;
+          transition: transform 0.1s;
+        }
+
+        .swatch:hover {
+          transform: scale(1.15);
+        }
+
+        .swatch.active { 
+          border: 2px solid var(--text); 
+          outline: 4px solid var(--bg); 
+          outline-offset: -2px; 
+        }
+
+        .action-strip {
+          margin-top: auto;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          max-width: 500px;
+        }
+
+        .action-btn {
+          background: var(--card2);
+          border: 1px solid var(--border);
+          border-radius: 10px;
+          color: var(--text-muted);
+          padding: 1.25rem;
+          font-family: 'JetBrains Mono', monospace, 'Space Mono';
+          font-size: 0.65rem;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+
+        .action-btn:hover { 
+          color: var(--text); 
+          background: var(--card2); 
+        }
+
+        .action-btn.danger { 
+          color: #ff5555; 
+        }
+
+        .action-btn.danger:hover { 
+          background: rgba(255, 85, 85, 0.1); 
+        }
+
+        .footer-meta {
+          padding: 1.5rem;
+          margin-top: auto;
+          border-top: 1px solid var(--border);
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+
+        .avatar-mini { 
+          width: 24px; 
+          height: 24px; 
+          background: var(--accent); 
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 1024px) {
+          .system-container {
+            grid-template-columns: 280px 1fr;
+          }
+        }
+
+        @media (max-width: 580px) {
+          .system-container {
+            grid-template-columns: 1fr;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            height: 100%;
+            width: 100%;
+            max-height: none;
+            max-width: none;
+            border-radius: 0;
+            border: none;
+          }
+          .nav-pane {
+            display: none !important;
+          }
+          .master-pane {
+            border-right: none !important;
+            border-bottom: none;
+            flex: 1;
+          }
+          .pane-header {
+            padding: 2rem 1.5rem 1rem;
+          }
+          .setting-categories {
+            display: flex;
+            flex-direction: column;
+            padding: 0 1rem 1rem;
+            gap: 0.5rem;
+            border-bottom: none;
+          }
+          .category-item {
+            padding: 1.25rem 1.5rem;
+            border: 1px solid var(--border) !important;
+            border-radius: 12px;
+            white-space: normal;
+            width: 100%;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+          }
+          .category-item::after {
+            content: '>';
+            color: var(--text-muted);
+            font-family: monospace;
+            font-size: 1.2rem;
+          }
+          .category-meta {
+            display: none;
+          }
+          .category-title {
+            font-size: 1rem;
+            margin-bottom: 0;
+            text-align: left;
+          }
+          .detail-pane {
+            padding: 2rem 1.5rem;
+            gap: 2rem;
+            flex: 1;
+            overflow-y: visible;
+          }
+        }
+      `}</style>
+
+      <div className="system-container">
+        {/* Architectural Close Button */}
+        <button 
+          onClick={onClose} 
+          style={{ 
+            position: 'absolute', 
+            top: '1.5rem', 
+            right: '1.5rem', 
+            background: 'none', 
+            border: 'none', 
+            color: 'var(--text)', 
+            fontSize: '1.5rem', 
+            cursor: 'pointer', 
+            opacity: 0.4, 
+            transition: 'opacity 0.2s',
+            zIndex: 1000
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+          onMouseLeave={(e) => e.currentTarget.style.opacity = '0.4'}
+          title="Close Settings"
+        >
+          ✕
         </button>
-        <span className="dash-title">Settings</span>
-        <span style={{ width: 34 }} />
-      </div>
-      <div className="dash-content" style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', padding: '2rem 1.5rem', gap: '2rem', maxWidth: '500px', margin: '0 auto', width: '100%' }}>
 
-        <div className="setting-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-          <span className="setting-label" style={{ fontWeight: 'bold' }}>Username</span>
-          <div style={{ display: 'flex', width: '100%', gap: '10px' }}>
-            <input
-              type="text"
-              value={usernameInput}
-              onChange={e => { 
-                const cleanValue = e.target.value.replace(/\s+/g, '').toLowerCase();
-                setUsernameInput(cleanValue); 
-                setUsernameStatus(''); 
-              }}
-              placeholder="e.g. shadow_focus"
-              disabled={daysLeft > 0}
-              style={{ flex: 1, padding: '0.8rem', borderRadius: '8px', border: `1px solid ${usernameStatus === 'available' ? '#4CAF50' : (usernameStatus.startsWith('error') || usernameStatus === 'taken') ? '#EF4444' : 'var(--border)'}`, background: 'var(--bg)', color: 'var(--text)', outline: 'none' }}
-            />
-            {daysLeft === 0 && usernameInput !== settings.username && (
-              <button
-                onClick={handleSaveUsername}
-                disabled={usernameStatus !== 'available'}
-                style={{ padding: '0 1rem', background: usernameStatus === 'available' ? 'var(--accent)' : 'var(--card2)', color: usernameStatus === 'available' ? '#000' : 'var(--text-muted)', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: usernameStatus === 'available' ? 'pointer' : 'not-allowed', transition: 'all 0.2s' }}
-              >
-                Save
-              </button>
-            )}
+        {/* Column 1: Navigation Pane removed at user request */}
+
+        {/* Column 2: Master Category Pane */}
+        {(!isMobile || !selectedMobileCategory) && (
+        <div className="master-pane">
+          <div className="pane-header">
+            <span className="pane-label">Configuration</span>
+            <h1 className="settings-title">Settings</h1>
           </div>
-
-          {/* Status Messages */}
-          <div style={{ fontSize: '0.85rem', marginTop: '4px', minHeight: '20px' }}>
-            {daysLeft > 0 && <span style={{ color: '#F59E0B' }}>⏳ You can change your username in {daysLeft} days.</span>}
-            {daysLeft === 0 && usernameStatus === 'checking' && <span style={{ color: 'var(--text-muted)' }}>🔍 Checking availability...</span>}
-            {daysLeft === 0 && usernameStatus === 'available' && <span style={{ color: '#4CAF50' }}>✨ Username is available!</span>}
-            {daysLeft === 0 && usernameStatus === 'taken' && <span style={{ color: '#EF4444' }}>❌ Username is already taken.</span>}
-            {daysLeft === 0 && usernameStatus === 'error_length' && <span style={{ color: '#EF4444' }}>⚠️ Username must be between 3 and 15 characters.</span>}
-            {daysLeft === 0 && usernameStatus === 'error_invalid' && <span style={{ color: '#EF4444' }}>⚠️ Only letters, numbers, and underscores (_) are allowed.</span>}
-            {usernameStatus === 'saved' && <span style={{ color: '#4CAF50' }}>✅ Username successfully saved!</span>}
+          <div className="setting-categories">
+            <button 
+              className={`category-item ${activeCategory === 'profile' ? 'active' : ''}`}
+              onClick={() => { setActiveCategory('profile'); setSelectedMobileCategory('profile'); }}
+            >
+              <span className="category-meta">Profile</span>
+              <span className="category-title">Account Profile</span>
+            </button>
+            <button 
+              className={`category-item ${activeCategory === 'timing' ? 'active' : ''}`}
+              onClick={() => { setActiveCategory('timing'); setSelectedMobileCategory('timing'); }}
+            >
+              <span className="category-meta">Timing</span>
+              <span className="category-title">Timer Dynamics</span>
+            </button>
+            <button 
+              className={`category-item ${activeCategory === 'alerts' ? 'active' : ''}`}
+              onClick={() => { setActiveCategory('alerts'); setSelectedMobileCategory('alerts'); }}
+            >
+              <span className="category-meta">Alerts</span>
+              <span className="category-title">System Alerts</span>
+            </button>
+            <button 
+              className={`category-item ${activeCategory === 'canvas' ? 'active' : ''}`}
+              onClick={() => { setActiveCategory('canvas'); setSelectedMobileCategory('canvas'); }}
+            >
+              <span className="category-meta">Canvas</span>
+              <span className="category-title">Visual Configuration</span>
+            </button>
           </div>
         </div>
+        )}
 
-        {/* Theme Selection */}
-        <div className="setting-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginTop: '1rem' }}>
-          <span className="setting-label" style={{ fontWeight: 'bold' }}>App Theme</span>
-          <button 
-            onClick={cycleTheme}
-            style={{ padding: '0.5rem 1.2rem', background: 'var(--card2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '20px', fontSize: '0.95rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}
-          >
-            <span style={{ fontSize: '1.1rem' }}>
-              {theme === 'light' ? '☀️' : theme === 'dark' ? '🌙' : '🕰️'}
-            </span>
-            {theme === 'light' ? 'Light' : theme === 'dark' ? 'Dark' : 'Flip (OLED)'}
-          </button>
-        </div>
+        {/* Column 3: Detailed Form Pane */}
+        {(!isMobile || selectedMobileCategory) && (
+        <main className="detail-pane">
+          {isMobile && selectedMobileCategory && (
+            <button 
+              onClick={() => setSelectedMobileCategory(null)}
+              style={{ marginBottom: '1.5rem', background: 'transparent', border: 'none', color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontFamily: '"Space Mono", monospace', fontSize: '0.9rem', padding: 0 }}
+            >
+              ← Back to Settings
+            </button>
+          )}
+          {activeCategory === 'profile' && (
+            <>
+              {/* Identity Handle Card */}
+              <div className="field-group">
+                <div className="setting-group-card">
+                  <label className="field-label" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}>
+                    Identity Handle
+                  </label>
+                  <div className="field">
+                    <div style={{ display: 'flex', width: '100%', gap: '10px' }}>
+                      <input
+                        type="text"
+                        value={usernameInput}
+                        onChange={e => { 
+                          const cleanValue = e.target.value.replace(/\s+/g, '').toLowerCase();
+                          setUsernameInput(cleanValue); 
+                          setUsernameStatus(''); 
+                        }}
+                        placeholder="e.g. shadow_focus"
+                        disabled={daysLeft > 0}
+                        className="field-input"
+                        style={{ 
+                          borderColor: usernameStatus === 'available' ? '#4CAF50' : (usernameStatus.startsWith('error') || usernameStatus === 'taken') ? '#EF4444' : 'var(--border)' 
+                        }}
+                      />
+                      {daysLeft === 0 && usernameInput !== settings.username && (
+                        <button
+                          onClick={handleSaveUsername}
+                          disabled={usernameStatus !== 'available'}
+                          style={{ 
+                            padding: '0 1.5rem', 
+                            background: usernameStatus === 'available' ? 'var(--accent)' : 'var(--card2)', 
+                            color: usernameStatus === 'available' ? '#000' : 'var(--text-muted)', 
+                            border: '1px solid var(--border)', 
+                            borderRadius: '10px',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            fontSize: '0.75rem',
+                            textTransform: 'uppercase',
+                            fontWeight: 'bold', 
+                            cursor: usernameStatus === 'available' ? 'pointer' : 'not-allowed', 
+                            transition: 'all 0.2s' 
+                          }}
+                        >
+                          Save
+                        </button>
+                      )}
+                    </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <h3 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', borderBottom: '1px solid var(--divider)', paddingBottom: '0.5rem' }}>⏳ Durations & Goals</h3>
-          <div className="settings-row"><span className="settings-label">Default Study (min)</span><input type="number" className="settings-input" value={settings.studyMin} onChange={e => updateSetting('studyMin', Math.max(1, parseInt(e.target.value) || 1))} /></div>
-          <div className="settings-row"><span className="settings-label">Default Break (min)</span><input type="number" className="settings-input" value={settings.breakMin} onChange={e => updateSetting('breakMin', Math.max(1, parseInt(e.target.value) || 1))} /></div>
-          <div className="settings-row"><span className="settings-label">Default Normal (min)</span><input type="number" className="settings-input" value={settings.normalMin} onChange={e => updateSetting('normalMin', Math.max(1, parseInt(e.target.value) || 1))} /></div>
-          <div className="settings-row"><span className="settings-label">Daily Focus Goal (hrs)</span><input type="number" className="settings-input" value={settings.dailyGoal} onChange={e => updateSetting('dailyGoal', Math.max(1, parseInt(e.target.value) || 1))} /></div>
-        </div>
+                    {/* Status Messages */}
+                    <div style={{ fontSize: '0.8rem', minHeight: '20px', fontFamily: 'JetBrains Mono, monospace' }}>
+                      {daysLeft > 0 && <span style={{ color: '#F59E0B', display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> Username lock active. Cooldown: {daysLeft} days.</span>}
+                      {daysLeft === 0 && usernameStatus === 'checking' && <span style={{ color: 'var(--text-muted)' }}>Checking handle availability...</span>}
+                      {daysLeft === 0 && usernameStatus === 'available' && <span style={{ color: '#4CAF50', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle size={14} /> Handle available.</span>}
+                      {daysLeft === 0 && usernameStatus === 'taken' && <span style={{ color: '#EF4444', display: 'flex', alignItems: 'center', gap: '4px' }}><XCircle size={14} /> Handle already registered by another user.</span>}
+                      {daysLeft === 0 && usernameStatus === 'error_length' && <span style={{ color: '#EF4444', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertTriangle size={14} /> Constraints violated: Must be 3-15 chars.</span>}
+                      {daysLeft === 0 && usernameStatus === 'error_invalid' && <span style={{ color: '#EF4444', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertTriangle size={14} /> Invalid characters. Alphanumeric and underscores only.</span>}
+                      {usernameStatus === 'saved' && <span style={{ color: '#4CAF50', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle size={14} /> Handle successfully saved.</span>}
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <h3 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', borderBottom: '1px solid var(--divider)', paddingBottom: '0.5rem' }}>⚙️ Focus & Alerts</h3>
-          <div className="settings-row"><span className="settings-label">Audio Alerts</span><label className="settings-toggle"><input type="checkbox" checked={settings.audioEnabled} onChange={e => updateSetting('audioEnabled', e.target.checked)} /><span className="toggle-slider"></span></label></div>
-          <div className="settings-row"><span className="settings-label">Strict Mode</span><label className="settings-toggle"><input type="checkbox" checked={settings.strictMode} onChange={e => updateSetting('strictMode', e.target.checked)} /><span className="toggle-slider"></span></label></div>
-        </div>
+              {/* Interface Mode Card */}
+              <div className="field-group">
+                <div className="setting-group-card">
+                  <label className="field-label" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}>
+                    Interface Mode
+                  </label>
+                  <div className="field">
+                    <select 
+                      className="field-select"
+                      value={theme}
+                      onChange={e => {
+                        const selected = e.target.value;
+                        if (setTheme) {
+                          setTheme(selected);
+                        }
+                      }}
+                    >
+                      <option value="dark">Dark Mode</option>
+                      <option value="light">Light Mode</option>
+                      <option value="flip">Flip Clock Classic</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <h3 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', borderBottom: '1px solid var(--divider)', paddingBottom: '0.5rem' }}>🎨 Display</h3>
-          <div className="settings-row">
-            <span className="settings-label">Clock Format</span>
-            <select className="settings-input" style={{ width: 'auto', cursor: 'pointer' }} value={settings.clockFormat || '12h'} onChange={e => updateSetting('clockFormat', e.target.value)}>
-              <option value="12h">12-Hour</option>
-              <option value="24h">24-Hour</option>
-            </select>
-          </div>
-          <div className="settings-row"><span className="settings-label">Accent Color</span><div className="color-picker">{ACCENT_COLORS.map(c => (<div key={c.value} className={`color-dot${settings.accentColor === c.value ? ' active' : ''}`} style={{ backgroundColor: c.value }} onClick={() => updateSetting('accentColor', c.value)} title={c.name} />))}</div></div>
-        </div>
+              {/* Data Backup Card */}
+              <div className="field-group">
+                <div className="setting-group-card">
+                  <label className="field-label" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
+                    Data Portability
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <button className="action-btn" onClick={handleExportData} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <Download size={16} /> Export .CSV
+                    </button>
+                    
+                    <input 
+                      type="file" 
+                      accept=".csv" 
+                      id="csv-upload" 
+                      style={{ display: 'none' }} 
+                      onChange={handleImportCSV} 
+                    />
+                    <button className="action-btn" onClick={() => document.getElementById('csv-upload').click()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <Upload size={16} /> Import .CSV
+                    </button>
+                  </div>
+                </div>
+              </div>
 
+              {/* System Actions Card */}
+              <div className="field-group">
+                <div className="setting-group-card">
+                  <label className="field-label" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
+                    System Actions
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <button className="action-btn danger" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} onClick={handleClearData}>
+                      <Trash2 size={16} /> Wipe System Cache
+                    </button>
 
-        <div style={{ borderTop: '1px solid var(--divider)', paddingTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={handleExportData} style={{ flex: 1, padding: '10px', background: 'var(--card2)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s', fontWeight: '500' }}>📥 Export CSV</button>
-            
-            <input type="file" accept=".csv" id="csv-upload" style={{ display: 'none' }} onChange={handleImportCSV} />
-            <button onClick={() => document.getElementById('csv-upload').click()} style={{ flex: 1, padding: '10px', background: 'var(--card2)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s', fontWeight: '500' }}>📤 Import CSV</button>
-          </div>
-          <button onClick={handleLogout} style={{ padding: '10px', background: 'var(--card2)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg> Sign Out</button>
-          <button onClick={handleClearData} style={{ padding: '10px', background: 'transparent', border: '1px solid #ff4444', color: '#ff4444', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s' }}>Clear Local Data</button>
-        </div>
+                    <button className="action-btn" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} onClick={handleLogout}>
+                      <LogOut size={16} /> Sign Out
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeCategory === 'timing' && (
+            <>
+              {/* Focus & Break Intervals Card */}
+              <div className="field-group">
+                <div className="setting-group-card">
+                  <label className="field-label" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}>
+                    Focus & Break Intervals
+                  </label>
+                  <div className="setting-grid">
+                    <div className="field">
+                      <label className="field-label" style={{ fontSize: '0.65rem', opacity: 0.8 }}>Study Session (MIN)</label>
+                      <input 
+                        type="number" 
+                        className="field-input" 
+                        value={settings.studyMin} 
+                        onChange={e => updateSetting('studyMin', Math.max(1, parseInt(e.target.value) || 1))} 
+                      />
+                    </div>
+
+                    <div className="field">
+                      <label className="field-label" style={{ fontSize: '0.65rem', opacity: 0.8 }}>Break Interval (MIN)</label>
+                      <input 
+                        type="number" 
+                        className="field-input" 
+                        value={settings.breakMin} 
+                        onChange={e => updateSetting('breakMin', Math.max(1, parseInt(e.target.value) || 1))} 
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Standard Timer & Goals Card */}
+              <div className="field-group">
+                <div className="setting-group-card">
+                  <label className="field-label" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}>
+                    Standard Timer & Goals
+                  </label>
+                  <div className="setting-grid">
+                    <div className="field">
+                      <label className="field-label" style={{ fontSize: '0.65rem', opacity: 0.8 }}>Normal Session (MIN)</label>
+                      <input 
+                        type="number" 
+                        className="field-input" 
+                        value={settings.normalMin} 
+                        onChange={e => updateSetting('normalMin', Math.max(1, parseInt(e.target.value) || 1))} 
+                      />
+                    </div>
+
+                    <div className="field">
+                      <label className="field-label" style={{ fontSize: '0.65rem', opacity: 0.8 }}>Daily Focus Goal (HRS)</label>
+                      <input 
+                        type="number" 
+                        className="field-input" 
+                        value={settings.dailyGoal} 
+                        onChange={e => updateSetting('dailyGoal', Math.max(1, parseInt(e.target.value) || 1))} 
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeCategory === 'alerts' && (
+            <>
+              {/* Sound Response Card */}
+              <div className="field-group">
+                <div className="setting-group-card">
+                  <label className="field-label" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}>
+                    Sound Response
+                  </label>
+                  <div 
+                    className="toggle-control"
+                    onClick={() => updateSetting('audioEnabled', !settings.audioEnabled)}
+                  >
+                    <label className="field-label" style={{ cursor: 'pointer', margin: 0 }}>Audio Notifications</label>
+                    <div className={`toggle-switch ${settings.audioEnabled ? 'active' : ''}`} />
+                  </div>
+                </div>
+              </div>
+
+              {/* App Rules Card */}
+              <div className="field-group">
+                <div className="setting-group-card">
+                  <label className="field-label" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}>
+                    App Rules
+                  </label>
+                  <div 
+                    className="toggle-control"
+                    onClick={() => updateSetting('strictMode', !settings.strictMode)}
+                  >
+                    <label className="field-label" style={{ cursor: 'pointer', margin: 0 }}>Strict Mode (Block Exits)</label>
+                    <div className={`toggle-switch ${settings.strictMode ? 'active' : ''}`} />
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeCategory === 'canvas' && (
+            <>
+              {/* Clock Format Card */}
+              <div className="field-group">
+                <div className="setting-group-card">
+                  <label className="field-label" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}>
+                    Clock Format
+                  </label>
+                  <div className="field">
+                    <select 
+                      className="field-select" 
+                      value={settings.clockFormat || '12h'} 
+                      onChange={e => updateSetting('clockFormat', e.target.value)}
+                    >
+                      <option value="12h">12-Hour</option>
+                      <option value="24h">24-Hour</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Theme Accent Card */}
+              <div className="field-group">
+                <div className="setting-group-card">
+                  <label className="field-label" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}>
+                    Theme Accent
+                  </label>
+                  <div className="field">
+                    <div className="color-swatches" style={{ marginTop: '0.5rem' }}>
+                      {ACCENT_COLORS.map(c => (
+                        <div 
+                          key={c.value} 
+                          className={`swatch ${settings.accentColor === c.value ? 'active' : ''}`} 
+                          style={{ backgroundColor: c.value }} 
+                          onClick={() => updateSetting('accentColor', c.value)} 
+                          title={c.name} 
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </main>
+        )}
       </div>
     </div>
   );

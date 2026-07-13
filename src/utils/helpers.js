@@ -58,21 +58,87 @@ export async function syncToCloud() {
 
 export function saveSession(subject, elapsedSeconds) {
   if (elapsedSeconds < 5) return null;
-  const durationMinutes = Math.max(1, Math.round(elapsedSeconds / 60));
+  
   const now = new Date();
-  const offset = now.getTimezoneOffset();
-  const local = new Date(now.getTime() - offset * 60000);
-  const entry = {
-    id: Math.floor(Date.now() / 1000),
-    date: local.toISOString().split('T')[0],
-    subject: subject || 'Study',
-    durationMinutes
-  };
+  const startTime = new Date(now.getTime() - elapsedSeconds * 1000);
+  
   const sessions = getSessions();
-  sessions.push(entry);
+  
+  // Calculate local dates
+  const getLocalDateStr = (d) => {
+    const offset = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - offset * 60000);
+    return local.toISOString().split('T')[0];
+  };
+
+  const startDateStr = getLocalDateStr(startTime);
+  const endDateStr = getLocalDateStr(now);
+
+  if (startDateStr !== endDateStr) {
+    // Session crossed midnight
+    // End of start day:
+    const endOfStartDay = new Date(startTime);
+    endOfStartDay.setHours(23, 59, 59, 999);
+    
+    let currentStart = startTime;
+    
+    while (getLocalDateStr(currentStart) !== getLocalDateStr(now)) {
+      const eod = new Date(currentStart);
+      eod.setHours(23, 59, 59, 999);
+      
+      const durationSecs = (eod.getTime() - currentStart.getTime()) / 1000;
+      const durationMins = Math.max(1, Math.round(durationSecs / 60));
+      
+      sessions.push({
+        id: Math.floor(currentStart.getTime() / 1000),
+        date: getLocalDateStr(currentStart),
+        subject: subject || 'Study',
+        durationMinutes: durationMins
+      });
+      
+      currentStart = new Date(eod.getTime() + 1);
+    }
+    
+    // Remaining time on end date
+    const remainingSecs = (now.getTime() - currentStart.getTime()) / 1000;
+    if (remainingSecs >= 30) { // Only save if at least 30 seconds into the new day
+      sessions.push({
+        id: Math.floor(currentStart.getTime() / 1000),
+        date: getLocalDateStr(currentStart),
+        subject: subject || 'Study',
+        durationMinutes: Math.max(1, Math.round(remainingSecs / 60))
+      });
+    }
+  } else {
+    // Normal single-day session
+    const durationMinutes = Math.max(1, Math.round(elapsedSeconds / 60));
+    sessions.push({
+      id: Math.floor(Date.now() / 1000),
+      date: endDateStr,
+      subject: subject || 'Study',
+      durationMinutes
+    });
+  }
+
   localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
   syncToCloud();
-  return entry;
+  return sessions[sessions.length - 1];
+}
+
+export function getUniqueSubjects() {
+  const sessions = getSessions();
+  const subjects = [...new Set(sessions.map(s => s.subject).filter(Boolean))];
+  return subjects;
+}
+
+export function updateSession(id, data) {
+  const sessions = getSessions();
+  const index = sessions.findIndex(s => s.id === id);
+  if (index !== -1) {
+    sessions[index] = { ...sessions[index], ...data };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+    syncToCloud();
+  }
 }
 
 export function deleteSession(id) {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, fbDb, auth } from '../config/firebase';
+import { User, Plus, Clock, Check, Users } from 'lucide-react';
 
 function formatTime(totalMins) {
   if (!totalMins) return '0 mins';
@@ -58,7 +59,9 @@ export default function UserProfileModal({ user, onClose }) {
       <div className="modal-content" style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '20px', padding: '2rem', width: '95%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>👤 User Profile</h2>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <User size={20} /> User Profile
+          </h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text)', fontSize: '1.6rem', cursor: 'pointer' }}>&times;</button>
         </div>
         
@@ -72,11 +75,11 @@ export default function UserProfileModal({ user, onClose }) {
           
           {/* Friend Action Button */}
           {currentUid !== targetUid && (
-            <button onClick={handleFriendAction} disabled={friendStatus === 'sent' || friendStatus === 'friends'} style={{ marginTop: '0.75rem', padding: '0.5rem 1.25rem', borderRadius: '20px', border: '1px solid var(--border)', background: friendStatus === 'none' ? 'var(--accent)' : 'var(--card)', color: friendStatus === 'none' ? '#000' : 'var(--text)', fontWeight: 'bold', cursor: 'pointer' }}>
-              {friendStatus === 'none' && '➕ Add Friend'}
-              {friendStatus === 'sent' && '⏳ Request Sent'}
-              {friendStatus === 'received' && '✅ Accept Request'}
-              {friendStatus === 'friends' && '🤝 Friends'}
+            <button onClick={handleFriendAction} disabled={friendStatus === 'sent' || friendStatus === 'friends'} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '0.75rem', padding: '0.5rem 1.25rem', borderRadius: '20px', border: '1px solid var(--border)', background: friendStatus === 'none' ? 'var(--accent)' : 'var(--card)', color: friendStatus === 'none' ? '#000' : 'var(--text)', fontWeight: 'bold', cursor: 'pointer' }}>
+              {friendStatus === 'none' && <><Plus size={16} /> Add Friend</>}
+              {friendStatus === 'sent' && <><Clock size={16} /> Request Sent</>}
+              {friendStatus === 'received' && <><Check size={16} /> Accept Request</>}
+              {friendStatus === 'friends' && <><Users size={16} /> Friends</>}
             </button>
           )}
         </div>

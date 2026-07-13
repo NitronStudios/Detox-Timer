@@ -1,12 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import FlipDisplay from './FlipDisplay';
-import { saveSession } from '../utils/helpers';
+import { saveSession, getUniqueSubjects } from '../utils/helpers';
+import AutocompleteInput from './AutocompleteInput';
 
-export default function StopwatchPage({ onStateChange }) {
+export default function StopwatchPage({ onStateChange, isTabActive }) {
   const [subject, setSubject] = useState('');
+  const [uniqueSubjects, setUniqueSubjects] = useState([]);
+
+  useEffect(() => {
+    setUniqueSubjects(getUniqueSubjects());
+  }, []);
   const [elapsed, setElapsed] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [laps, setLaps] = useState([]);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const intervalRef = useRef(null);
 
   useEffect(() => {
@@ -60,6 +67,18 @@ export default function StopwatchPage({ onStateChange }) {
     setLaps(l => [...l, { num: l.length + 1, time: label }]);
   }
 
+
+  useEffect(() => {
+    const onToggle = () => {
+      if (isTabActive) {
+        if (isRunning) handlePause();
+        else handleStart();
+      }
+    };
+    window.addEventListener('toggle-timer', onToggle);
+    return () => window.removeEventListener('toggle-timer', onToggle);
+  }, [isRunning, isTabActive]);
+
   function handleStart() {
     setIsRunning(true);
   }
@@ -79,17 +98,30 @@ export default function StopwatchPage({ onStateChange }) {
   }
 
   function handleDiscard() {
-    if (window.confirm("Are you sure you want to discard this time without saving?")) {
-      setIsRunning(false);
-      setElapsed(0);
-      setLaps([]);
-      setSubject('');
-    }
+    setShowDiscardConfirm(true);
+  }
+
+  function confirmDiscard() {
+    setShowDiscardConfirm(false);
+    setIsRunning(false);
+    setElapsed(0);
+    setLaps([]);
+    setSubject('');
   }
 
   if (isActive) {
     return (
       <div className="running-page-wrapper">
+        {showDiscardConfirm && (
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' }}>
+            <h3 style={{ color: 'var(--text)', marginBottom: '15px' }}>Discard Session?</h3>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '25px', maxWidth: '300px' }}>Are you sure you want to discard this time without saving?</p>
+            <div style={{ display: 'flex', gap: '15px' }}>
+              <button className="ctrl-btn ctrl-btn-outline" onClick={() => setShowDiscardConfirm(false)}>CANCEL</button>
+              <button className="ctrl-btn ctrl-btn-resume" onClick={confirmDiscard} style={{ background: '#EF4444', borderColor: '#EF4444' }}>DISCARD</button>
+            </div>
+          </div>
+        )}
         {/* (1) Subject Name/Stopwatch title at top */}
         <div className="phase-pill study" style={{ fontSize: '0.85rem', padding: '0.4rem 1.2rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '0.5rem', marginBottom: '0.5rem' }}>
           ● {subject.trim() || 'Flow Session'}
@@ -158,14 +190,13 @@ export default function StopwatchPage({ onStateChange }) {
       }}>
         
         <div className="subject-wrap" style={{ margin: 0, width: '85%', maxWidth: '350px' }}>
-          <input
+          <AutocompleteInput
             className="subject-input"
-            type="text"
+            uniqueSubjects={uniqueSubjects}
             placeholder="What are you working on?"
             value={subject}
-            onChange={e => setSubject(e.target.value)}
+            onChange={setSubject}
             maxLength={50}
-            style={{ width: '100%' }}
           />
         </div>
 

@@ -54,110 +54,376 @@ export default function LoginScreen() {
   };
 
   return (
-    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#121212', color: '#ffffff', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      
-      {/* Premium Animations Injected */}
+    <div className="login-screen-container">
       <style>
         {`
-          @keyframes fadeSlideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+          .login-screen-container {
+            --bg: #0d0d0e;
+            --ink: #e4e4e7;
+            --accent: #4CAF50;
+            --ink-faint: rgba(228, 228, 231, 0.1);
+            --ink-medium: rgba(228, 228, 231, 0.6);
+            --card-bg: #18181b;
+            background-color: var(--bg);
+            color: var(--ink);
+            font-family: 'Inter', sans-serif;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+            overflow-y: auto;
           }
-          .auth-card {
-            animation: fadeSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+
+          .app-shell {
+            display: grid;
+            grid-template-columns: 1fr 480px;
+            min-height: 100dvh;
+            width: 100%;
           }
-          .anim-input {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+          /* Cinematic Left Panel */
+          .hero-panel {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            text-align: center;
+            padding: 4rem;
+            border-right: 1px solid var(--ink-faint);
+            background: radial-gradient(circle at 50% 30%, rgba(76, 175, 80, 0.05) 0%, transparent 40%);
+            background-color: var(--bg);
+            overflow: hidden;
           }
-          .anim-input:focus {
-            border-color: #4CAF50 !important;
-            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.15);
-            transform: translateY(-1px);
+
+          .meta-data {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: var(--accent);
+            font-weight: 700;
           }
-          .anim-btn {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+          .main-headline {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(4rem, 10vw, 9rem);
+            line-height: 0.85;
+            letter-spacing: -0.05em;
+            text-transform: uppercase;
+            margin-top: 185px;
+            margin-bottom: 2rem;
+            font-weight: 800;
           }
-          .anim-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(76, 175, 80, 0.25);
-            filter: brightness(1.05);
+
+          .hero-footer {
+            display: flex;
+            align-self: flex-start;
+            text-align: left;
+            width: 100%;
+            z-index: 10;
           }
-          .anim-btn:active:not(:disabled) {
-            transform: translateY(0);
-            box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
+
+          .desc-text {
+            max-width: 340px;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: var(--ink-medium);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
           }
-          .google-btn {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+          /* Structured Right Panel */
+          .auth-panel {
+            background-color: var(--bg);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 4rem;
+            position: relative;
           }
-          .google-btn:hover {
-            background-color: #333 !important;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+
+          .auth-panel::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: linear-gradient(var(--ink-faint) 1px, transparent 1px), linear-gradient(to right, var(--ink-faint) 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.3;
+            pointer-events: none;
           }
-          .google-btn:active {
-            transform: translateY(0);
+
+          .form-container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
           }
-          .toggle-text {
-            transition: color 0.2s ease;
+
+          .form-header {
+            margin-bottom: 2.5rem;
           }
-          .toggle-text:hover {
-            color: #66BB6A !important;
+
+          .form-header h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: 2.5rem;
+            text-transform: uppercase;
+            margin-bottom: 0.75rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+          }
+
+          .form-header p {
+            color: var(--ink-medium);
+            font-size: 0.95rem;
+            line-height: 1.5;
+          }
+
+          .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+          }
+
+          .field-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--ink-medium);
+            font-weight: 700;
+            display: block;
+            margin-bottom: 0.25rem;
+          }
+
+          .input-control {
+            background: var(--card-bg);
+            border: 1px solid var(--ink-faint);
+            padding: 1rem;
+            color: var(--ink);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            width: 100%;
+            box-sizing: border-box;
+          }
+
+          .input-control:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+          }
+
+          .btn {
+            width: 100%;
+            padding: 1.1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: transform 0.1s, opacity 0.2s, background-color 0.2s;
+          }
+
+          .btn-primary {
+            background-color: var(--accent);
+            color: white;
+          }
+
+          .btn-secondary {
+            background-color: transparent;
+            border: 1px solid var(--ink-faint);
+            color: var(--ink);
+            margin-top: 1rem;
+          }
+
+          .btn:hover:not(:disabled) {
+            opacity: 0.9;
+          }
+
+          .btn:active:not(:disabled) {
+            transform: scale(0.98);
+          }
+
+          .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+
+          .separator {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 2rem 0;
+          }
+
+          .line {
+            flex: 1;
+            height: 1px;
+            background: var(--ink-faint);
+          }
+
+          .sep-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--ink-medium);
+            font-weight: 700;
+          }
+
+          .switch-link {
+            margin-top: 2.5rem;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--ink-medium);
+          }
+
+          .switch-link span {
+            color: var(--accent);
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+            transition: color 0.2s;
+          }
+
+          .switch-link span:hover {
+            color: #3d8b41;
+          }
+
+          .decoration-svg {
+            position: absolute;
+            top: 50%;
+            right: -100px;
+            transform: translateY(-50%);
+            pointer-events: none;
+            opacity: 0.12;
+            animation: spin 60s linear infinite;
+          }
+
+          @keyframes spin {
+            from { transform: translateY(-50%) rotate(0deg); }
+            to { transform: translateY(-50%) rotate(360deg); }
+          }
+
+          .error-container {
+            background: rgba(255, 59, 48, 0.1);
+            border: 1px solid #ff3b30;
+            padding: 0.8rem 1rem;
+            margin-bottom: 1.2rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: #ff3b30;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-weight: 700;
+          }
+
+          @media (max-width: 1000px) {
+            .app-shell {
+              grid-template-columns: 1fr;
+            }
+            .hero-panel {
+              display: none;
+            }
+            .auth-panel {
+              padding: 2.5rem 1.5rem;
+            }
           }
         `}
       </style>
 
-      <div className="auth-card" style={{ backgroundColor: '#1E1E1E', border: '1px solid #2C2C2C', borderRadius: '16px', padding: '2.5rem 2rem', width: '90%', maxWidth: '400px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
-        
-        {/* Header Section */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ width: '48px', height: '48px', backgroundColor: '#2A2A2A', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', border: '1px solid #333' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
+      <div className="app-shell">
+        <section className="hero-panel">
+          <h1 className="main-headline">
+            Detox<br />Timer
+          </h1>
+          <div className="hero-footer">
+            <p className="desc-text">Flip clock study timer with Pomodoro & analytics dashboard.</p>
           </div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: '600', margin: '0 0 0.5rem' }}>Detox Timer</h1>
-          <p style={{ color: '#A0A0A0', fontSize: '0.9rem', margin: 0 }}>Login to sync your focus sessions</p>
-        </div>
+        </section>
 
-        <form onSubmit={handleEmailAuth} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-            <input className="anim-input" type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} required
-              style={{ width: '100%', padding: '12px 16px', backgroundColor: '#2A2A2A', border: '1px solid #333', borderRadius: '8px', color: '#fff', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
-            />
-            <input className="anim-input" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required
-              style={{ width: '100%', padding: '12px 16px', backgroundColor: '#2A2A2A', border: '1px solid #333', borderRadius: '8px', color: '#fff', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
-            />
+        <section className="auth-panel">
+          <div className="form-container">
+            <header className="form-header">
+              <h1>{isSignUp ? 'Sign Up' : 'Log In'}</h1>
+              <p>
+                {isSignUp
+                  ? 'Create an account to start tracking, syncing, and building healthy focus streaks across your devices.'
+                  : 'Login to sync your focus sessions and access your study dashboard across devices.'
+                }
+              </p>
+            </header>
+
+            {error && (
+              <div className="error-container">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ flexShrink: 0, marginTop: '2px' }}>
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <span>{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleEmailAuth}>
+              <div className="input-group">
+                <input
+                  type="email"
+                  className="input-control"
+                  placeholder="Email Address"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                />
+                <input
+                  type="password"
+                  className="input-control"
+                  placeholder="Password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  style={{ marginTop: '0.75rem' }}
+                />
+              </div>
+
+              <button type="submit" className="btn btn-primary" disabled={loading}>
+                <span>{loading ? 'Processing...' : (isSignUp ? 'Sign Up' : 'Log In')}</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
+            </form>
+
+            <div className="separator">
+              <div className="line"></div>
+              <div className="sep-text">OR CONTINUE WITH</div>
+              <div className="line"></div>
+            </div>
+
+            <button className="btn btn-secondary" onClick={handleGoogleLogin} disabled={loading}>
+              <img width="16" height="16" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" />
+              <span>Google Account</span>
+            </button>
+
+
+
+            <p className="switch-link">
+              {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
+              <span onClick={() => setIsSignUp(!isSignUp)}>
+                {isSignUp ? 'Log In' : 'Sign Up'}
+              </span>
+            </p>
           </div>
-
-          {error && <p style={{ color: '#FF5252', fontSize: '0.85rem', margin: '0', textAlign: 'center', animation: 'fadeSlideUp 0.3s ease' }}>{error}</p>}
-
-          <button className="anim-btn" type="submit" disabled={loading}
-            style={{ width: '100%', padding: '12px', backgroundColor: '#4CAF50', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', marginTop: '0.5rem', opacity: loading ? 0.7 : 1 }}>
-            {loading ? 'Processing...' : (isSignUp ? 'Sign Up' : 'Log In')}
-          </button>
-        </form>
-
-        <div style={{ display: 'flex', alignItems: 'center', margin: '1.5rem 0', color: '#666', fontSize: '0.8rem', fontWeight: '500' }}>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#333' }}></div>
-          <span style={{ padding: '0 1rem' }}>OR</span>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#333' }}></div>
-        </div>
-
-        <button className="google-btn" onClick={handleGoogleLogin} disabled={loading}
-          style={{ width: '100%', padding: '12px', backgroundColor: '#2A2A2A', color: '#E0E0E0', border: '1px solid #333', borderRadius: '8px', fontSize: '0.95rem', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: '18px', height: '18px' }} />
-          Continue with Google
-        </button>
-
-        <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem', color: '#A0A0A0' }}>
-          {isSignUp ? "Already have an account?" : "Don't have an account?"} {' '}
-          <span className="toggle-text" onClick={() => setIsSignUp(!isSignUp)} style={{ color: '#4CAF50', cursor: 'pointer', fontWeight: '500' }}>
-            {isSignUp ? 'Log In' : 'Sign Up'}
-          </span>
-        </p>
-
+        </section>
       </div>
     </div>
   );

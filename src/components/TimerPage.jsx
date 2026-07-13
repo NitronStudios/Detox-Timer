@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import FlipDisplay from './FlipDisplay';
 import PomodoroConfig from './PomodoroConfig';
-import { saveSession } from '../utils/helpers';
+import { saveSession, getUniqueSubjects } from '../utils/helpers';
+import AutocompleteInput from './AutocompleteInput';
 
-export default function TimerPage({ settings, onStateChange }) {
+export default function TimerPage({ settings, onStateChange, isTabActive }) {
   const [studyMin, setStudyMin] = useState(settings.studyMin);
   const [breakMin, setBreakMin] = useState(settings.breakMin);
   const [phase, setPhase] = useState('study');
@@ -11,8 +12,14 @@ export default function TimerPage({ settings, onStateChange }) {
   const [elapsed, setElapsed] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [showStrictConfirm, setShowStrictConfirm] = useState(false);
   const [subject, setSubject] = useState('');
+  const [uniqueSubjects, setUniqueSubjects] = useState([]);
   const intervalRef = useRef(null);
+
+  useEffect(() => {
+    setUniqueSubjects(getUniqueSubjects());
+  }, []);
 
   // Sync settings when defaults change
   useEffect(() => {
@@ -55,7 +62,7 @@ export default function TimerPage({ settings, onStateChange }) {
         }
       }, 1000);
     }
-    return () => clearInterval(intervalRef.current);
+  
   }, [isRunning]);
 
   useEffect(() => {
@@ -97,6 +104,21 @@ export default function TimerPage({ settings, onStateChange }) {
       localStorage.removeItem('detox_timer_target');
     }
   }, [isRunning, timeLeft]);
+
+
+  useEffect(() => {
+    const onToggle = () => {
+      // Only toggle if this tab is active (TimerPage doesn't know tab, but we can assume if it's rendered, wait, TimerPage is always rendered but might be hidden!
+      // If we only want the active one, we should pass tab === 'Pomodoro' as a prop, or just check its offsetParent.
+      if (isTabActive) {
+        if (isRunning) handlePause();
+        else if (isPaused) handleResume();
+        else handleStart();
+      }
+    };
+    window.addEventListener('toggle-timer', onToggle);
+    return () => window.removeEventListener('toggle-timer', onToggle);
+  }, [isRunning, isPaused, isTabActive]);
 
   const playBeep = () => {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -150,7 +172,7 @@ export default function TimerPage({ settings, onStateChange }) {
 
   function handleStopClick() {
     if (settings.strictMode) {
-      if (window.confirm('Strict Mode: Are you sure you want to break your focus?')) handleSave();
+      setShowStrictConfirm(true);
     } else {
       handleSave();
     }
@@ -161,11 +183,21 @@ export default function TimerPage({ settings, onStateChange }) {
   if (active) {
     return (
       <div className="running-page-wrapper">
+        {showStrictConfirm && (
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' }}>
+            <h3 style={{ color: 'var(--text)', marginBottom: '15px' }}>Strict Mode Active</h3>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '25px', maxWidth: '300px' }}>Are you sure you want to break your focus?</p>
+            <div style={{ display: 'flex', gap: '15px' }}>
+              <button className="ctrl-btn ctrl-btn-outline" onClick={() => setShowStrictConfirm(false)}>CANCEL</button>
+              <button className="ctrl-btn ctrl-btn-resume" onClick={() => { setShowStrictConfirm(false); handleSave(); }}>STOP SESSION</button>
+            </div>
+          </div>
+        )}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
           <div className={`phase-pill${phase === 'study' ? ' study' : ' break-phase'}`}>
             {phase === 'study' ? '● Study' : '● Break'}
           </div>
-          <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>
+          <div className="session-title" style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>
             {subject.trim() || 'Study'} Session
           </div>
         </div>
@@ -223,7 +255,14 @@ export default function TimerPage({ settings, onStateChange }) {
         )}
 
         <div className="subject-wrap" style={{ margin: 0, width: '85%', maxWidth: '350px' }}>
-          <input className="subject-input" type="text" placeholder="What are you studying?" value={subject} onChange={e => setSubject(e.target.value)} maxLength={50} style={{ width: '100%' }} />
+          <AutocompleteInput
+            className="subject-input"
+            uniqueSubjects={uniqueSubjects}
+            placeholder="What are you studying?"
+            value={subject}
+            onChange={setSubject}
+            maxLength={50}
+          />
         </div>
 
         <FlipDisplay seconds={timeLeft} />

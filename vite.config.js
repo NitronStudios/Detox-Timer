@@ -9,4 +9,9 @@ const base = process.env.GITHUB_ACTIONS ? '/Detox-Timer/' : './';
 export default defineConfig({
   plugins: [react()],
   base,
+  server: {
+    host: '0.0.0.0',
+    port: 3000,
+    strictPort: true,
+  },
 })

@@ -8,8 +8,10 @@ DETOX TIMER is a premium, distraction-free productivity app built by **Nitron St
 
 * **3 Focus Modes:** Choose between a classic Pomodoro Timer, a Stopwatch, or a cool 3D Flip Clock.
 * **Syncs Everywhere:** Log in with Google, and your study time automatically syncs between your phone and your laptop. 
-* **Native Android App:** Say goodbye to browser tabs! Get the full-screen, distraction-free experience directly on your Android phone.
-* **Analytics Dashboard:** Keep yourself motivated by tracking your study history over the last 7 days with beautiful charts.
+* **Native Android App:** Say goodbye to browser tabs! Get the full-screen, distraction-free experience directly on your Android phone with native settings navigation.
+* **Analytics Dashboard:** Keep yourself motivated by tracking your study history over the last 7 days with beautiful charts and a 365-day GitHub-style Activity Heatmap.
+* **Global Leaderboard:** Compete with users worldwide on Daily, Weekly, Monthly, and Yearly leaderboards.
+* **Friends & Chat:** Add your friends and chat with them in real-time right from the app.
 * **Strict Mode:** No cheating! Strict mode disables the pause button so you are forced to complete your focus session.
 * **Personalize It:** Choose between Dark Mode, Light Mode, and multiple accent colors to match your vibe.
 

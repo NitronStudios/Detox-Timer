@@ -10,7 +10,7 @@ export default function FlipDisplay({ seconds, showHours = false }) {
   const sStr = String(s).padStart(2, '0');
 
   return (
-    <div className="flip-group">
+    <div className={`flip-group${showHours ? ' has-hours' : ''}`}>
       {showHours && <>
         <div className="flip-pair">
           <FlipCard digit={hStr[0]} />

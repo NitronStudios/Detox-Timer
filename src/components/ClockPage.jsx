@@ -25,7 +25,7 @@ export default function ClockPage({ settings }) {
     <div className="page">
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: '15px', position: 'relative' }}>
         <FlipDisplay seconds={totalSeconds} showHours />
-        {ampm && <span style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-muted)', position: 'absolute', right: '-40px', bottom: '15px' }}>{ampm}</span>}
+        {ampm && <span className="clock-ampm" style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-muted)', position: 'absolute', right: '-40px', bottom: '15px' }}>{ampm}</span>}
       </div>
       <div className="clock-date">{dateStr}</div>
     </div>

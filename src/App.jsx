@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { auth, fbAuth, db, fbDb } from './config/firebase';
 import { Capacitor, SystemBars } from '@capacitor/core';
+import { Maximize, Minimize } from 'lucide-react';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { NavigationBar } from '@hugotomazi/capacitor-navigation-bar';
 import Navbar from './components/Navbar';
@@ -19,7 +20,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authChecking, setAuthChecking] = useState(true);
 
-  const [tab, setTab] = useState('Pomodoro');
+  const [tab, setTab] = useState('Timer');
   const [showDash, setShowDash] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showManualLog, setShowManualLog] = useState(false);
@@ -27,6 +28,7 @@ export default function App() {
   const [showChat, setShowChat] = useState(false);
   const [timerActive, setTimerActive] = useState(false);
   const [stopwatchActive, setStopwatchActive] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const [settings, setSettings] = useState(() => {
     try {
@@ -129,15 +131,15 @@ export default function App() {
       requestWakeLock();
       window.addEventListener('beforeunload', handleBeforeUnload);
       document.addEventListener('visibilitychange', handleVisibilityChange);
-      
+
       // 4. Anti-Swipe Back Hack (Mobile)
       window.history.pushState(null, '', window.location.href);
       window.onpopstate = function () {
-         if (window.confirm("Focus Session is active! Are you sure you want to go back?")) {
-             window.history.back();
-         } else {
-             window.history.pushState(null, '', window.location.href);
-         }
+        if (window.confirm("Focus Session is active! Are you sure you want to go back?")) {
+          window.history.back();
+        } else {
+          window.history.pushState(null, '', window.location.href);
+        }
       };
     } else {
       releaseWakeLock();
@@ -165,7 +167,7 @@ export default function App() {
         await StatusBar.setBackgroundColor({ color: '#000000' });
         // Let the webview extend seamlessly behind the status bar (CSS safe-area will handle padding)
         await StatusBar.setOverlaysWebView({ overlay: true });
-        
+
         // Force true black on the bottom Android Navigation Bar natively
         await NavigationBar.setColor({ color: '#000000', darkButtons: false });
       } catch (e) {
@@ -231,11 +233,11 @@ export default function App() {
         // Dynamically import SafeArea so it doesn't break web builds if not installed
         const { SafeArea } = await import('@capacitor-community/safe-area');
         const insets = await SafeArea.getSafeAreaInsets();
-        
+
         // If the native API successfully returns a value > 0, apply it.
         // Otherwise, fallback to a hardcoded minimum padding (e.g., 28px) for typical Android status bars.
         const topInset = insets.insets.top > 0 ? `${insets.insets.top}px` : '32px';
-        
+
         document.documentElement.style.setProperty('--safe-top', topInset);
       } catch (e) {
         console.log("Safe Area plugin not found or failed, applying fallback.", e);
@@ -255,28 +257,28 @@ export default function App() {
     if (!Capacitor.isNativePlatform()) return;
 
     let cleanupFns = [];
-    
+
     const setupKeyboardListeners = async () => {
       try {
         const { Keyboard } = await import('@capacitor/keyboard');
-        
+
         const showListener = await Keyboard.addListener('keyboardWillShow', () => {
           document.documentElement.classList.add('keyboard-open');
         });
-        
+
         const hideListener = await Keyboard.addListener('keyboardWillHide', () => {
           document.documentElement.classList.remove('keyboard-open');
         });
-        
+
         cleanupFns.push(() => showListener.remove());
         cleanupFns.push(() => hideListener.remove());
       } catch (e) {
         console.log("Keyboard plugin not available:", e);
       }
     };
-    
+
     setupKeyboardListeners();
-    
+
     return () => {
       cleanupFns.forEach(fn => fn());
     };
@@ -297,6 +299,53 @@ export default function App() {
     return () => clearInterval(interval);
   }, [auth.currentUser]);
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.log(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  };
+
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      // Ignore if typing in input
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+      
+      if (e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        if ((tab === 'Clock' || (tab === 'Timer' && stopwatchActive) || (tab === 'Pomodoro' && timerActive))) toggleFullscreen();
+      } else if (e.code === 'Space') {
+        e.preventDefault();
+        window.dispatchEvent(new Event('toggle-timer'));
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [isFullscreen, tab, stopwatchActive, timerActive]);
+
+
+  const handleDoubleClick = (e) => {
+    // Avoid triggering on inputs or buttons
+    if (['INPUT', 'BUTTON', 'TEXTAREA', 'SELECT', 'A'].includes(e.target.tagName)) return;
+    if (e.target.closest('.controls') || e.target.closest('.pomo-config') || e.target.closest('.navbar')) return;
+    
+    if ((tab === 'Clock' || (tab === 'Timer' && stopwatchActive) || (tab === 'Pomodoro' && timerActive))) toggleFullscreen();
+  };
+
   function cycleTheme() {
     setTheme(t => t === 'flip' ? 'dark' : t === 'dark' ? 'light' : 'flip');
   }
@@ -311,16 +360,16 @@ export default function App() {
   // We check this AFTER authChecking is false, meaning we've already tried fetching their existing cloud data.
   if (user && !settings.username) {
     return (
-      <OnboardingScreen 
-        settings={settings} 
-        setSettings={setSettings} 
-        onComplete={() => console.log('Onboarding complete')} 
+      <OnboardingScreen
+        settings={settings}
+        setSettings={setSettings}
+        onComplete={() => console.log('Onboarding complete')}
       />
     );
   }
 
   return (
-    <div className="app">
+    <div className={`app ${isFullscreen ? 'is-fullscreen' : ''}`} onDoubleClick={handleDoubleClick}>
       <Navbar tab={tab} setTab={setTab} theme={theme} cycleTheme={cycleTheme}
         showDash={showDash} setShowDash={setShowDash}
         showSettings={showSettings} setShowSettings={setShowSettings}
@@ -334,7 +383,7 @@ export default function App() {
           onClick={() => { if (tab !== 'Pomodoro' && timerActive) setTab('Pomodoro'); }}
           title={tab !== 'Pomodoro' && timerActive ? "Click to return to Pomodoro" : ""}
         >
-          <TimerPage onStateChange={setTimerActive} settings={settings} />
+          <TimerPage onStateChange={setTimerActive} settings={settings} isTabActive={tab === 'Pomodoro'} />
         </div>
 
         <div
@@ -342,7 +391,7 @@ export default function App() {
           onClick={() => { if (tab !== 'Timer' && stopwatchActive) setTab('Timer'); }}
           title={tab !== 'Timer' && stopwatchActive ? "Click to return to Timer" : ""}
         >
-          <StopwatchPage onStateChange={setStopwatchActive} />
+          <StopwatchPage onStateChange={setStopwatchActive} isTabActive={tab === 'Timer'} />
         </div>
 
         <div className={`page-wrapper ${tab === 'Clock' ? 'active' : 'hidden'}`}>
@@ -350,8 +399,26 @@ export default function App() {
         </div>
       </div>
 
+      {!showDash && !showSettings && !showManualLog && !showLeaderboard && !showChat && (tab === 'Clock' || (tab === 'Timer' && stopwatchActive) || (tab === 'Pomodoro' && timerActive)) && (
+        <button className="fullscreen-btn" onClick={toggleFullscreen} title="Toggle Fullscreen">
+          {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+        </button>
+      )}
+
       {showDash && <Dashboard settings={settings} setShowManualLog={setShowManualLog} onClose={() => setShowDash(false)} />}
-      {showSettings && <Settings settings={settings} setSettings={setSettings} theme={theme} cycleTheme={cycleTheme} onClose={() => setShowSettings(false)} />}
+      {showSettings && (
+        <Settings 
+          settings={settings} 
+          setSettings={setSettings} 
+          theme={theme} 
+          setTheme={setTheme}
+          cycleTheme={cycleTheme} 
+          onClose={() => setShowSettings(false)} 
+          setShowDash={setShowDash}
+          setShowLeaderboard={setShowLeaderboard}
+          setShowChat={setShowChat}
+        />
+      )}
       {showManualLog && <ManualLogModal onClose={() => setShowManualLog(false)} />}
       {showLeaderboard && <LeaderboardModal onClose={() => setShowLeaderboard(false)} />}
       {showChat && <ChatModal onClose={() => setShowChat(false)} />}
